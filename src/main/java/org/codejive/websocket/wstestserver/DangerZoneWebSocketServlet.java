@@ -28,7 +28,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     }
 
     private enum Action {
-        run, script, scriptsrc, css, csslink
+        run, script, scriptsrc, css, csslink, head, body
     }
 
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
@@ -93,10 +93,10 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         private void onAction(Event event, String data) {
             switch (event) {
                 case ready:
-                    send(Action.scriptsrc, "http://code.jquery.com/jquery-1.4.2.min.js");
                     send(Action.css, "body {background-color:red}");
                     send(Action.run, "alert('yo!')");
-                    send(Action.run, "$('main').style = ''");
+                    send(Action.run, "$('main').removeClass('spinner')");
+                    send(Action.body, "<h1>YO!</h1>");
                     break;
             }
         }

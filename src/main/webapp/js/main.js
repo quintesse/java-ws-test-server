@@ -29,23 +29,8 @@ function __onMessage(msg) {
 }
 
 function __onAction(action, data) {
-    switch (action) {
-        case 'run':
-            eval(data);
-            break;
-        case 'script':
-            __insertScript(data);
-            break;
-        case 'scriptsrc':
-            __insertScriptSrc(data);
-            break;
-        case 'css':
-            __insertCss(data);
-            break;
-        case 'csslink':
-            __insertCssLink(data);
-            break;
-    }
+    var func = '__do' + action.slice(0, 1).toUpperCase() + action.slice(1);
+    __dispatch(func, data);
 }
 
 function __onClose(msg) {
@@ -62,28 +47,51 @@ function __send(action, data) {
     }
 }
 
-function __insertScript(data) {
+function __dispatch() {
+    var fn = Array.prototype.shift.call(arguments);
+    fn = (typeof fn == "function") ? fn : window[fn];
+    return fn.apply(this, arguments);
+}
+
+function __doRun(data) {
+    eval(data);
+}
+
+
+
+
+
+
+function __doHead(data) {
+    $('head').append(data);
+}
+
+function __doBody(data) {
+    $('body').append(data);
+}
+
+function __doScript(data) {
     var tmp = document.createElement("script");
     tmp.type = 'text/javascript';
     tmp.innerHTML = data;
     document.getElementsByTagName('head')[0].appendChild(tmp);
 }
 
-function __insertScriptSrc(data) {
+function __doScriptsrc(data) {
     var tmp = document.createElement("script");
     tmp.type = 'text/javascript';
     tmp.src = data;
     document.getElementsByTagName('head')[0].appendChild(tmp);
 }
 
-function __insertCss(data) {
+function __doCss(data) {
     var tmp = document.createElement("style");
     tmp.type = 'text/css';
     tmp.innerHTML = data;
     document.getElementsByTagName('head')[0].appendChild(tmp);
 }
 
-function __insertCssLink(data) {
+function __doCsslink(data) {
     var tmp = document.createElement("link");
     tmp.type = 'text/css';
     tmp.rel = 'stylesheet';
