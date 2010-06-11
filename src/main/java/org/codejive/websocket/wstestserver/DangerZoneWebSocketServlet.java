@@ -5,6 +5,7 @@
 package org.codejive.websocket.wstestserver;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
+import org.json.simple.JSONValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +30,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     }
 
     private enum Action {
-        run, script, scriptsrc, css, csslink, head, body
+        run, script, scriptsrc, css, csslink, head, body, multi
     }
 
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
@@ -93,12 +95,25 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         private void onAction(Event event, String data) {
             switch (event) {
                 case ready:
-                    send(Action.css, "body {background-color:red}");
-                    send(Action.run, "alert('yo!')");
-                    send(Action.run, "$('main').removeClass('spinner')");
-                    send(Action.body, "<h1>YO!</h1>");
+                    sendMultiple(
+                        Action.css, "body {background-color:red}",
+                        Action.run, "alert('yo!')",
+                        Action.run, "$('#main').removeClass('spinner')",
+                        Action.body, "<h1>YO!</h1>"
+                    );
                     break;
             }
+        }
+
+        private void sendMultiple(Object... info) {
+            LinkedHashMap map = new LinkedHashMap();
+            for (int i = 0; i < info.length; i += 2) {
+                Action action = (Action) info[i];
+                String data = (String) info[i + 1];
+                map.put(action.toString(), data);
+            }
+            String jsonText = JSONValue.toJSONString(map);
+            send(Action.multi, jsonText);
         }
 
         private void send(Action action, String data) {

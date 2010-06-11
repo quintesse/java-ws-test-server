@@ -24,13 +24,8 @@ function __onMessage(msg) {
         } else {
             action = msg.data;
         }
-        __onAction(action, data);
+        __perform(action, data);
     }
-}
-
-function __onAction(action, data) {
-    var func = '__do' + action.slice(0, 1).toUpperCase() + action.slice(1);
-    __dispatch(func, data);
 }
 
 function __onClose(msg) {
@@ -57,6 +52,18 @@ function __doRun(data) {
     eval(data);
 }
 
+function __perform(action, data) {
+    var func = '__do' + action.slice(0, 1).toUpperCase() + action.slice(1);
+    __dispatch(func, data);
+}
+
+function __doMulti(data) {
+    var info = JSON.parse(data);
+    for (var action in info) {
+        var mdata = info[action];
+        __perform(action, mdata);
+    }
+}
 
 
 
