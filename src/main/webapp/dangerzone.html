@@ -9,15 +9,17 @@
                 background-repeat: no-repeat
             }
         </style>
-        <script type='text/javascript' src="http://code.jquery.com/jquery-1.4.2.min.js"></script>
+        <script type='text/javascript' src="js/jquery-1.4.2.min.js"></script>
         <script type='text/javascript' src="js/main.js"></script>
         <script type='text/javascript'>
             if (!window.WebSocket) {
                 alert('Sorry, you need a browser that supports WebSockets');
             }
 
+            var dangerzone;
             $(document).ready(function() {
-                connect();
+                dangerzone = new DangerZone();
+                dangerzone.connect();
             });
         </script>
     </head>

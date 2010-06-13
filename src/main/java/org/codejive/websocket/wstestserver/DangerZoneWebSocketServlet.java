@@ -5,7 +5,7 @@
 package org.codejive.websocket.wstestserver;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
+import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     }
 
     private enum Action {
-        run, script, scriptsrc, css, csslink, head, body, multi
+        run, script, scriptsrc, css, csslink, head, body, multi, activate
     }
 
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
@@ -96,23 +97,30 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             switch (event) {
                 case ready:
                     sendMultiple(
-                        Action.css, "body {background-color:red}",
-                        Action.run, "alert('yo!')",
                         Action.run, "$('#main').removeClass('spinner')",
-                        Action.body, "<h1>YO!</h1>"
+                        Action.body, "<h1>YO1!</h1>",
+                        Action.body, "<h1>YO2!</h1>",
+                        Action.body, "<h1>YO3!</h1>",
+                        Action.body, "<h1>YO4!</h1>",
+                        Action.body, "<h1>YO5!</h1>",
+                        Action.body, "<h1>YO6!</h1>",
+                        Action.activate, "starbutton"
                     );
                     break;
             }
         }
 
         private void sendMultiple(Object... info) {
-            LinkedHashMap map = new LinkedHashMap();
+            LinkedList<JSONObject> list = new LinkedList();
             for (int i = 0; i < info.length; i += 2) {
+                JSONObject map = new JSONObject();
                 Action action = (Action) info[i];
                 String data = (String) info[i + 1];
-                map.put(action.toString(), data);
+                map.put("action", action.toString());
+                map.put("data", data);
+                list.add(map);
             }
-            String jsonText = JSONValue.toJSONString(map);
+            String jsonText = JSONValue.toJSONString(list);
             send(Action.multi, jsonText);
         }
 
