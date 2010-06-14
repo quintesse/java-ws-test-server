@@ -19,22 +19,14 @@ DangerZone.prototype.connect = function(url) {
 }
 
 DangerZone.prototype.onOpen = function() {
-    this.send('ready', null);
+    this.send('sys', 'ready', null);
 }
 
 DangerZone.prototype.onMessage = function(msg) {
     if (msg.data) {
-        var action = null;
-        var data = null;
-        var p = msg.data.indexOf("#");
-        if (p > 0) {
-            action = msg.data.slice(0, p);
-            data = msg.data.slice(p + 1);
-        } else if (p == 0) {
-            data = msg.data.slice(1);
-        } else {
-            action = msg.data;
-        }
+        var info = JSON.parse(msg.data);
+        var action = info.action;
+        var data = info.data;
         this.perform(action, data);
     }
 }
@@ -45,13 +37,18 @@ DangerZone.prototype.onClose = function(msg) {
     alert('Bye!');
 }
 
-DangerZone.prototype.send = function(action, data) {
-    if (data != null) {
-        if (action == null) action = '';
-        this.webSocket.send(action + '#' + data);
-    } else {
-        this.webSocket.send(action);
-    }
+DangerZone.prototype.send = function(to, action, data) {
+    var info = {
+        "to" : to,
+        "action" : action,
+        "data" : data
+    };
+    var msg = JSON.stringify(info);
+    this.webSocket.send(msg);
+}
+
+DangerZone.prototype.broadcast = function(action, data) {
+    this.send('all', action, data);
 }
 
 DangerZone.prototype.perform = function(action, data) {
@@ -100,6 +97,10 @@ DangerZone.prototype.packageUrl = function(pkgName) {
     return "/pkg/" + pkgName + "/";
 }
 
+DangerZone.prototype.getNewId = function() {
+    return this.id + "_" + this.nextobjid++;
+}
+
 
 // ****************************************************************
 // ActionHandler
@@ -109,18 +110,26 @@ function ActionHandler(zone) {
     this.zone = zone;
 }
 
-ActionHandler.prototype.run = function(data) {
-    eval(data);
+ActionHandler.prototype.init = function(data) {
+    this.zone.id = data;
+    this.zone.nextobjid = 1;
+}
+
+ActionHandler.prototype.single = function(info) {
+    var action = info.action;
+    var data = info.data;
+    this.zone.perform(action, data);
 }
 
 ActionHandler.prototype.multi = function(data) {
-    var info = JSON.parse(data);
-    for (var idx in info) {
-        var actdat = info[idx];
-        var act = actdat.action;
-        var dat = actdat.data;
-        this.zone.perform(act, dat);
+    for (var idx in data) {
+        var actdat = data[idx];
+        this.single(actdat);
     }
+}
+
+ActionHandler.prototype.run = function(data) {
+    eval(data);
 }
 
 ActionHandler.prototype.head = function(data) {

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -19,19 +20,22 @@ import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
     private final Set<DangerZoneWebSocket> _members = new CopyOnWriteArraySet<DangerZoneWebSocket>();
-
+    private long _zoneId = 1;
+    
     private enum Event {
         ready
     }
 
     private enum Action {
-        run, script, scriptsrc, css, csslink, head, body, multi, activate
+        run, script, scriptsrc, css, csslink, head, body, multi, activate, init
     }
 
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
@@ -73,18 +77,25 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         @Override
         public void onMessage(byte frame, String msg) {
             logger.info(this + " onMessage: " + msg);
-            Event event = null;
-            String data = null;
-            int p = msg.indexOf('#');
-            if (p > 0) {
-                event = Event.valueOf(msg.substring(0, p).toLowerCase());
-                data = msg.substring(p + 1);
-            } else if (p == 0) {
-                data = msg.substring(1);
-            } else {
-                event = Event.valueOf(msg.toLowerCase());
+            try {
+                JSONParser parser = new JSONParser();
+                JSONObject info = (JSONObject) parser.parse(msg);
+                String to = (String) info.get("to");
+                String action = (String) info.get("action");
+                Object data = (String) info.get("data");
+                if (to == null || "sys".equals(to)) {
+                    Event event = Event.valueOf(action.toLowerCase());
+                    onAction(event, data);
+                } else if ("all".equals(to)) {
+                    Action act = Action.valueOf(action.toLowerCase());
+                    sendAll(act, data);
+                } else {
+                    Action act = Action.valueOf(action.toLowerCase());
+                    sendTo(to, act, data);
+                }
+            } catch (ParseException ex) {
+                logger.error("Couldn't parse incoming message", ex);
             }
-            onAction(event, data);
         }
 
         @Override
@@ -93,17 +104,13 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             _members.remove(this);
         }
 
-        private void onAction(Event event, String data) {
+        private void onAction(Event event, Object data) {
             switch (event) {
                 case ready:
                     sendMultiple(
+                        Action.init, Long.toString(_zoneId++),
                         Action.run, "$('#main').removeClass('spinner')",
-                        Action.body, "<h1>YO1!</h1>",
-                        Action.body, "<h1>YO2!</h1>",
-                        Action.body, "<h1>YO3!</h1>",
-                        Action.body, "<h1>YO4!</h1>",
-                        Action.body, "<h1>YO5!</h1>",
-                        Action.body, "<h1>YO6!</h1>",
+                        Action.body, "<h1>YO</h1>",
                         Action.activate, "starbutton"
                     );
                     break;
@@ -120,30 +127,30 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                 map.put("data", data);
                 list.add(map);
             }
-            String jsonText = JSONValue.toJSONString(list);
-            send(Action.multi, jsonText);
+            send(Action.multi, list);
         }
 
-        private void send(Action action, String data) {
+        private void send(Action action, Object data) {
             try {
-                if (data != null) {
-                    if (action == null) {
-                        _outbound.sendMessage("#" + data);
-                    } else {
-                        _outbound.sendMessage(action + "#" + data);
-                    }
-                } else {
-                    _outbound.sendMessage(action.toString());
-                }
+                JSONObject info = new JSONObject();
+                info.put("action", action.toString());
+                info.put("data", data);
+                String jsonText = JSONValue.toJSONString(info);
+                _outbound.sendMessage(info.toString());
             } catch (IOException e) {
                 logger.warn("Could not send message", e);
             }
         }
 
-        private void sendAll(Action action, String data) {
+        private void sendAll(Action action, Object data) {
             for (DangerZoneWebSocket member : _members) {
                 member.send(action, data);
             }
+        }
+
+        private void sendTo(String to, Action action, Object data) {
+            // Not implemented yet
+            throw new UnsupportedOperationException("Not implemented yet");
         }
     }
 }
