@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -144,7 +143,9 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
         private void sendAll(Action action, Object data) {
             for (DangerZoneWebSocket member : _members) {
-                member.send(action, data);
+                if (member != this) {
+                    member.send(action, data);
+                }
             }
         }
 

@@ -49,6 +49,7 @@ DangerZone.prototype.send = function(to, action, data) {
 
 DangerZone.prototype.broadcast = function(action, data) {
     this.send('all', action, data);
+    this.perform(action, data);
 }
 
 DangerZone.prototype.perform = function(action, data) {
