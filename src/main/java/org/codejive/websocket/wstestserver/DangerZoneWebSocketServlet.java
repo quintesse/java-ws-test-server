@@ -6,8 +6,11 @@ package org.codejive.websocket.wstestserver;
 
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -27,6 +30,8 @@ import org.slf4j.LoggerFactory;
 public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
     private final Set<DangerZoneWebSocket> _members = new CopyOnWriteArraySet<DangerZoneWebSocket>();
+    private final Set<String> _storageIds = new CopyOnWriteArraySet<String>();
+    private final Map<String, JSONObject> _storage = new ConcurrentHashMap<String, JSONObject>();
     private long _zoneId = 1;
     
     private enum Event {
@@ -83,12 +88,22 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                 String action = (String) info.get("action");
                 Object data = (String) info.get("data");
                 if (to == null || "sys".equals(to)) {
+                    // The message is for the server
                     Event event = Event.valueOf(action.toLowerCase());
                     onAction(event, data);
                 } else if ("all".equals(to)) {
+                    // Send the message to all conencted sockets
+                    Action act = Action.valueOf(action.toLowerCase());
+                    sendAll(act, data);
+                } else if ("store".equals(to)) {
+                    // Store and send the message to all conencted sockets
+                    String id = (String) info.get("id");
+                    _storageIds.add(id);
+                    _storage.put(id, info);
                     Action act = Action.valueOf(action.toLowerCase());
                     sendAll(act, data);
                 } else {
+                    // Send the message to the indicated socket
                     Action act = Action.valueOf(action.toLowerCase());
                     sendTo(to, act, data);
                 }
@@ -99,33 +114,46 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
         @Override
         public void onDisconnect() {
-            logger.info(this+" onDisconnect");
+            logger.info(this + " onDisconnect");
             _members.remove(this);
         }
 
         private void onAction(Event event, Object data) {
             switch (event) {
                 case ready:
-                    sendMultiple(
-                        Action.init, Long.toString(_zoneId++),
-                        Action.run, "$('#main').removeClass('spinner')",
-                        Action.body, "<h1>YO</h1>",
-                        Action.activate, "starbutton"
-                    );
+                    LinkedList<JSONObject> list = new LinkedList();
+                    addMultiple(list, Action.init, Long.toString(_zoneId++));
+                    addMultiple(list, Action.run, "$('#main').removeClass('spinner')");
+                    addMultiple(list, Action.body, "<h1>YO</h1>");
+                    addMultiple(list, Action.activate, "starbutton");
+                    for (String id : _storageIds) {
+                        JSONObject info = _storage.get(id);
+                        String action = (String) info.get("action");
+                        Action act = Action.valueOf(action.toLowerCase());
+                        Object dat = info.get("data");
+                        addMultiple(list, act, dat);
+                    }
+                    sendMultiple(list);
                     break;
             }
+        }
+
+        private void addMultiple(List<JSONObject> list, Action action, Object data) {
+            JSONObject obj = new JSONObject();
+            obj.put("action", action.toString());
+            obj.put("data", data);
+            list.add(obj);
         }
 
         private void sendMultiple(Object... info) {
             LinkedList<JSONObject> list = new LinkedList();
             for (int i = 0; i < info.length; i += 2) {
-                JSONObject map = new JSONObject();
-                Action action = (Action) info[i];
-                String data = (String) info[i + 1];
-                map.put("action", action.toString());
-                map.put("data", data);
-                list.add(map);
+                addMultiple(list, (Action) info[i], info[i + 1]);
             }
+            sendMultiple(list);
+        }
+
+        private void sendMultiple(List<JSONObject> list) {
             send(Action.multi, list);
         }
 
@@ -137,7 +165,9 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                 String jsonText = JSONValue.toJSONString(info);
                 _outbound.sendMessage(info.toString());
             } catch (IOException e) {
-                logger.warn("Could not send message", e);
+                logger.error("Could not send message, disconnecting socket", e);
+                _outbound.disconnect();
+                _members.remove(this);
             }
         }
 

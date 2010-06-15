@@ -6,11 +6,11 @@
 
 function DangerZone() {
     this.actionHandler = new ActionHandler(this);
-    this.connect('ws://localhost:8080/dangerzone');
+    var location = document.location.toString().replace('http://','ws://').replace('https://','wss://').replace('.html','');
+    this.connect(location);
 }
 
 DangerZone.prototype.connect = function(url) {
-    //var location = document.location.toString().replace('http://','ws://').replace('https://','wss://');
     this.webSocket = new WebSocket(url);
     var zone = this;
     this.webSocket.onopen = function() {zone.onOpen()};
@@ -19,7 +19,7 @@ DangerZone.prototype.connect = function(url) {
 }
 
 DangerZone.prototype.onOpen = function() {
-    this.send('sys', 'ready', null);
+    this.send('sys', 'ready', null, null);
 }
 
 DangerZone.prototype.onMessage = function(msg) {
@@ -34,21 +34,27 @@ DangerZone.prototype.onMessage = function(msg) {
 DangerZone.prototype.onClose = function(msg) {
     this.webSocket = null;
     $('#main').removeClass('spinner')
-    alert('Bye!');
+    setTimeout('alert("Connection lost")', 1);
 }
 
-DangerZone.prototype.send = function(to, action, data) {
+DangerZone.prototype.send = function(to, action, data, id) {
     var info = {
         "to" : to,
         "action" : action,
-        "data" : data
+        "data" : data,
+        "id" : id
     };
     var msg = JSON.stringify(info);
     this.webSocket.send(msg);
 }
 
 DangerZone.prototype.broadcast = function(action, data) {
-    this.send('all', action, data);
+    this.send('all', action, data, null);
+    this.perform(action, data);
+}
+
+DangerZone.prototype.persist = function(action, data, id) {
+    this.send('store', action, data, id);
     this.perform(action, data);
 }
 

@@ -5,9 +5,11 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>JSP Page</title>
+        <title>Tako's Playground</title>
     </head>
     <body>
-        <h1>Hello World!!!</h1>
+        <h1>Tako's Playground</h1>
+
+        <a href="dangerzone.html">Danger Zone!</a>
     </body>
 </html>
