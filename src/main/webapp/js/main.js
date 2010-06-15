@@ -19,7 +19,7 @@ DangerZone.prototype.connect = function(url) {
 }
 
 DangerZone.prototype.onOpen = function() {
-    this.send('sys', 'ready', null, null);
+    this.send('sys', 'ready', null);
 }
 
 DangerZone.prototype.onMessage = function(msg) {
@@ -37,25 +37,35 @@ DangerZone.prototype.onClose = function(msg) {
     setTimeout('alert("Connection lost")', 1);
 }
 
-DangerZone.prototype.send = function(to, action, data, id) {
+DangerZone.prototype.send = function(to, action, data) {
     var info = {
         "to" : to,
         "action" : action,
-        "data" : data,
-        "id" : id
+        "data" : data
     };
     var msg = JSON.stringify(info);
     this.webSocket.send(msg);
 }
 
 DangerZone.prototype.broadcast = function(action, data) {
-    this.send('all', action, data, null);
+    this.send('all', action, data);
     this.perform(action, data);
 }
 
 DangerZone.prototype.persist = function(action, data, id) {
-    this.send('store', action, data, id);
+    var info = {
+        "to" : "all",
+        "action" : action,
+        "data" : data,
+        "id" : id
+    };
+    this.send('sys', 'store', info);
     this.perform(action, data);
+}
+
+DangerZone.prototype.unpersist = function(action, data, id) {
+    this.send('sys', 'remove', id);
+    this.broadcast(action, data);
 }
 
 DangerZone.prototype.perform = function(action, data) {

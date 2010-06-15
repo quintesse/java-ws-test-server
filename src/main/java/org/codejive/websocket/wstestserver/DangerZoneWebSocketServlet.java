@@ -35,7 +35,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     private long _zoneId = 1;
     
     private enum Event {
-        ready
+        ready, store, remove, clear
     }
 
     private enum Action {
@@ -86,20 +86,13 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                 JSONObject info = (JSONObject) parser.parse(msg);
                 String to = (String) info.get("to");
                 String action = (String) info.get("action");
-                Object data = (String) info.get("data");
+                Object data = info.get("data");
                 if (to == null || "sys".equals(to)) {
                     // The message is for the server
                     Event event = Event.valueOf(action.toLowerCase());
                     onAction(event, data);
                 } else if ("all".equals(to)) {
                     // Send the message to all conencted sockets
-                    Action act = Action.valueOf(action.toLowerCase());
-                    sendAll(act, data);
-                } else if ("store".equals(to)) {
-                    // Store and send the message to all conencted sockets
-                    String id = (String) info.get("id");
-                    _storageIds.add(id);
-                    _storage.put(id, info);
                     Action act = Action.valueOf(action.toLowerCase());
                     sendAll(act, data);
                 } else {
@@ -120,7 +113,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
         private void onAction(Event event, Object data) {
             switch (event) {
-                case ready:
+                case ready: {
                     LinkedList<JSONObject> list = new LinkedList();
                     addMultiple(list, Action.init, Long.toString(_zoneId++));
                     addMultiple(list, Action.run, "$('#main').removeClass('spinner')");
@@ -134,6 +127,30 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                         addMultiple(list, act, dat);
                     }
                     sendMultiple(list);
+                    }
+                    break;
+                case store: {
+                    // Store and send the message to all conencted sockets
+                    JSONObject info = (JSONObject) data;
+                    String id = (String) info.get("id");
+                    _storageIds.add(id);
+                    _storage.put(id, info);
+                    String action = (String) info.get("action");
+                    Action act = Action.valueOf(action.toLowerCase());
+                    Object dat = info.get("data");
+                    sendAll(act, dat);
+                    }
+                    break;
+                case remove: {
+                    // "Unstore" and send the message to all conencted sockets
+                    String id = (String) data;
+                    _storageIds.remove(id);
+                    _storage.remove(id);
+                    }
+                    break;
+                case clear:
+                    _storageIds.clear();
+                    _storage.clear();
                     break;
             }
         }
