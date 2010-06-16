@@ -8,7 +8,7 @@ document.onmousemove = function(event) {
         var objNewY = objStartY + diffY;
         var id = draggedObj[0].id;
         var scr = '$("#' + id + '").offset({ top: ' + objNewY + ', left: ' + objNewX + '})';
-        dangerzone.persist("run", scr, id + '_update');
+        protocolhandler.persist("run", scr, id + '_update');
     }
 }
 
@@ -29,15 +29,15 @@ $(".draggable").live("mousedown", function(event) {
 function twinkle() {
     var x = Math.floor(Math.random() * 500);
     var y = Math.floor(Math.random() * 500);
-    var id = dangerzone.getNewId();
+    var id = protocolhandler.getNewId();
     var html = '<img id="' + id + '" class="draggable" src="/pkg/starbutton/img/star.jpg" style="position:absolute; left:' + x + 'px; top:' + y + 'px; width:50px; height:50px" />';
-    dangerzone.persist("body", html, id + '_create');
+    protocolhandler.persist("body", html, id + '_create');
 }
 
 function starbutton(pkg) {
     this.pkg = pkg;
     pkg.loadHtml("main.html", function(bodyData) {
-        pkg.zone.addBody("<br><b>starbutton ready.</b><br>")
+        ContentEditor.addBody("<br><b>starbutton ready.</b><br>")
     });
 }
 

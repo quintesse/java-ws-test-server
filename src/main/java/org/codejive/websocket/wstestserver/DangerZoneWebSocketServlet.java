@@ -29,17 +29,13 @@ import org.slf4j.LoggerFactory;
 
 public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
-    private final Set<DangerZoneWebSocket> _members = new CopyOnWriteArraySet<DangerZoneWebSocket>();
+    private final Map<String, DangerZoneWebSocket> _members = new ConcurrentHashMap<String, DangerZoneWebSocket>();
     private final Set<String> _storageIds = new CopyOnWriteArraySet<String>();
     private final Map<String, JSONObject> _storage = new ConcurrentHashMap<String, JSONObject>();
     private long _zoneId = 1;
     
     private enum Event {
         ready, store, remove, clear
-    }
-
-    private enum Action {
-        run, script, scriptsrc, css, csslink, head, body, multi, activate, init
     }
 
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
@@ -65,12 +61,18 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     class DangerZoneWebSocket implements WebSocket {
 
         private Outbound _outbound;
+        private String _socketId;
+
+        private static final String ACTION_INIT = "init";
+        private static final String ACTION_ACTIVATE = "activate";
+        private static final String ACTION_MULTI = "multi";
 
         @Override
         public void onConnect(Outbound outbound) {
             logger.info(this + " onConnect");
             _outbound = outbound;
-            _members.add(this);
+            _socketId = Long.toString(_zoneId++);
+            _members.put(_socketId, this);
         }
 
         @Override
@@ -93,12 +95,10 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                     onAction(event, data);
                 } else if ("all".equals(to)) {
                     // Send the message to all conencted sockets
-                    Action act = Action.valueOf(action.toLowerCase());
-                    sendAll(act, data);
+                    sendAll(action, data);
                 } else {
                     // Send the message to the indicated socket
-                    Action act = Action.valueOf(action.toLowerCase());
-                    sendTo(to, act, data);
+                    sendTo(to, action, data);
                 }
             } catch (ParseException ex) {
                 logger.error("Couldn't parse incoming message", ex);
@@ -108,37 +108,33 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         @Override
         public void onDisconnect() {
             logger.info(this + " onDisconnect");
-            _members.remove(this);
+            _members.remove(_socketId);
         }
 
         private void onAction(Event event, Object data) {
             switch (event) {
                 case ready: {
                     LinkedList<JSONObject> list = new LinkedList();
-                    addMultiple(list, Action.init, Long.toString(_zoneId++));
-                    addMultiple(list, Action.run, "$('#main').removeClass('spinner')");
-                    addMultiple(list, Action.body, "<h1>YO</h1>");
-                    addMultiple(list, Action.activate, "starbutton");
+                    addMultiple(list, ACTION_INIT, _socketId);
+                    addMultiple(list, ACTION_ACTIVATE, "starbutton");
                     for (String id : _storageIds) {
                         JSONObject info = _storage.get(id);
                         String action = (String) info.get("action");
-                        Action act = Action.valueOf(action.toLowerCase());
                         Object dat = info.get("data");
-                        addMultiple(list, act, dat);
+                        addMultiple(list, action, dat);
                     }
-                    sendMultiple(list);
+                    sendMultiple("sys", list);
                     }
                     break;
                 case store: {
-                    // Store and send the message to all conencted sockets
+                    // Store and send the message to all connected sockets
                     JSONObject info = (JSONObject) data;
                     String id = (String) info.get("id");
                     _storageIds.add(id);
                     _storage.put(id, info);
                     String action = (String) info.get("action");
-                    Action act = Action.valueOf(action.toLowerCase());
                     Object dat = info.get("data");
-                    sendAll(act, dat);
+                    sendAll(action, dat);
                     }
                     break;
                 case remove: {
@@ -155,50 +151,53 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             }
         }
 
-        private void addMultiple(List<JSONObject> list, Action action, Object data) {
+        private void addMultiple(List<JSONObject> list, String action, Object data) {
             JSONObject obj = new JSONObject();
-            obj.put("action", action.toString());
+            obj.put("action", action);
             obj.put("data", data);
             list.add(obj);
         }
 
-        private void sendMultiple(Object... info) {
+        private void sendMultiple(String from, Object... info) {
             LinkedList<JSONObject> list = new LinkedList();
             for (int i = 0; i < info.length; i += 2) {
-                addMultiple(list, (Action) info[i], info[i + 1]);
+                addMultiple(list, (String) info[i], info[i + 1]);
             }
-            sendMultiple(list);
+            sendMultiple(from, list);
         }
 
-        private void sendMultiple(List<JSONObject> list) {
-            send(Action.multi, list);
+        private void sendMultiple(String from, List<JSONObject> list) {
+            send(from, ACTION_MULTI, list);
         }
 
-        private void send(Action action, Object data) {
+        private void send(String from, String action, Object data) {
             try {
                 JSONObject info = new JSONObject();
-                info.put("action", action.toString());
+                info.put("action", action);
                 info.put("data", data);
+                info.put("from", from);
                 String jsonText = JSONValue.toJSONString(info);
                 _outbound.sendMessage(info.toString());
             } catch (IOException e) {
                 logger.error("Could not send message, disconnecting socket", e);
                 _outbound.disconnect();
-                _members.remove(this);
+                _members.remove(_socketId);
             }
         }
 
-        private void sendAll(Action action, Object data) {
-            for (DangerZoneWebSocket member : _members) {
+        private void sendAll(String action, Object data) {
+            for (DangerZoneWebSocket member : _members.values()) {
                 if (member != this) {
-                    member.send(action, data);
+                    member.send(_socketId, action, data);
                 }
             }
         }
 
-        private void sendTo(String to, Action action, Object data) {
-            // Not implemented yet
-            throw new UnsupportedOperationException("Not implemented yet");
+        private void sendTo(String to, String action, Object data) {
+            DangerZoneWebSocket member = _members.get(to);
+            if (member != null) {
+                member.send(_socketId, action, data);
+            }
         }
     }
 }

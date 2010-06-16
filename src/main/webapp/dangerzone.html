@@ -21,27 +21,28 @@
                 alert('Sorry, you need a browser that supports WebSockets');
             }
 
-            var dangerzone;
+            var protocolhandler;
             $(document).ready(function() {
                 var dialog = $("<div></div>").attr("id", "errorDialog");
                 dialog.appendTo("body");
 
                 var location = document.location.toString().replace('http://','ws://').replace('https://','wss://').replace('.html','');
-                dangerzone = new DangerZone(dzOnOpen, dzOnClose);
-                dangerzone.connect(location);
+                protocolhandler = new ProtocolHandler(dzOnOpen, dzOnClose);
+                protocolhandler.connect(location);
             });
 
             var ratesPeriod = 2;
             var ratesInterval;
-            function dzOnOpen(id) {
+            function dzOnOpen(zone) {
+                $('#main').removeClass('spinner');
                 showRates();
-		ratesInterval = setInterval(showRates, ratesPeriod * 1000);
+                ratesInterval = setInterval(showRates, ratesPeriod * 1000);
             }
 
-            function dzOnClose(id) {
+            function dzOnClose(zone) {
+                $('#main').removeClass('spinner');
                 clearInterval(ratesInterval);
                 showRates();
-                $('#main').removeClass('spinner')
                 setTimeout('alert("Connection lost")', 1);
             }
 
@@ -49,9 +50,9 @@
             var oldPktSent = 0;
             function showRates() {
                 var txt;
-                if (dangerzone.isConnected()) {
-                    var pin = dangerzone.pktRecv;
-                    var pout = dangerzone.pktSent;
+                if (protocolhandler.isConnected()) {
+                    var pin = protocolhandler.pktRecv;
+                    var pout = protocolhandler.pktSent;
                     var din = (pin - oldPktRecv) / ratesPeriod;
                     var dout = (pout - oldPktSent) / ratesPeriod;
                     oldPktRecv = pin;
