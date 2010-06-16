@@ -3,6 +3,9 @@
     <head>
         <title>Danger Zone</title>
         <style type='text/css'>
+            body {
+                font: 62.5% "Trebuchet MS", sans-serif;
+            }
             .spinner {
                 background-image: url(/images/spinner.gif);
                 background-position: center;
@@ -11,7 +14,7 @@
         </style>
         <link type="text/css" href="css/jquery-ui-1.8.2.custom.css" rel="stylesheet" />
         <script type='text/javascript' src="js/jquery-1.4.2.min.js"></script>
-        <!-- script type='text/javascript' src="js/jquery-ui-1.8.2.custom.min.js"></script -->
+        <script type='text/javascript' src="js/jquery-ui-1.8.2.custom.min.js"></script>
         <script type='text/javascript' src="js/main.js"></script>
         <script type='text/javascript'>
             if (!window.WebSocket) {
@@ -20,11 +23,48 @@
 
             var dangerzone;
             $(document).ready(function() {
-                dangerzone = new DangerZone();
-                dangerzone.connect();
+                var dialog = $("<div></div>").attr("id", "errorDialog");
+                dialog.appendTo("body");
+
+                var location = document.location.toString().replace('http://','ws://').replace('https://','wss://').replace('.html','');
+                dangerzone = new DangerZone(dzOnOpen, dzOnClose);
+                dangerzone.connect(location);
             });
+
+            var ratesPeriod = 2;
+            var ratesInterval;
+            function dzOnOpen(id) {
+                showRates();
+		ratesInterval = setInterval(showRates, ratesPeriod * 1000);
+            }
+
+            function dzOnClose(id) {
+                clearInterval(ratesInterval);
+                showRates();
+                $('#main').removeClass('spinner')
+                setTimeout('alert("Connection lost")', 1);
+            }
+
+            var oldPktRecv = 0;
+            var oldPktSent = 0;
+            function showRates() {
+                var txt;
+                if (dangerzone.isConnected()) {
+                    var pin = dangerzone.pktRecv;
+                    var pout = dangerzone.pktSent;
+                    var din = (pin - oldPktRecv) / ratesPeriod;
+                    var dout = (pout - oldPktSent) / ratesPeriod;
+                    oldPktRecv = pin;
+                    oldPktSent = pout;
+                    txt = "In: " + din + " pkt/s, Out: " + dout + " pkt/s";
+                } else {
+                    txt = 'Disconnected';
+                }
+                $('#rates').text(txt);
+            }
         </script>
     </head>
     <body id="main" class="spinner">
+        <div id="rates">Disconnected</div>
     </body>
 </html>

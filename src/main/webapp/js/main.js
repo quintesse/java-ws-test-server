@@ -4,10 +4,11 @@
 // ****************************************************************
 
 
-function DangerZone() {
+function DangerZone(onopen, onclose) {
+    this.onopen = onopen;
+    this.onclose = onclose;
+    this.connected = false;
     this.actionHandler = new ActionHandler(this);
-    var location = document.location.toString().replace('http://','ws://').replace('https://','wss://').replace('.html','');
-    this.connect(location);
 }
 
 DangerZone.prototype.connect = function(url) {
@@ -16,6 +17,8 @@ DangerZone.prototype.connect = function(url) {
     this.webSocket.onopen = function() {zone.onOpen()};
     this.webSocket.onmessage = function(msg) {zone.onMessage(msg)};
     this.webSocket.onclose = function(msg) {zone.onClose(msg)};
+    this.pktRecv = 0;
+    this.pktSent = 0;
 }
 
 DangerZone.prototype.onOpen = function() {
@@ -23,6 +26,7 @@ DangerZone.prototype.onOpen = function() {
 }
 
 DangerZone.prototype.onMessage = function(msg) {
+    this.pktRecv++;
     if (msg.data) {
         var info = JSON.parse(msg.data);
         var action = info.action;
@@ -33,8 +37,14 @@ DangerZone.prototype.onMessage = function(msg) {
 
 DangerZone.prototype.onClose = function(msg) {
     this.webSocket = null;
-    $('#main').removeClass('spinner')
-    setTimeout('alert("Connection lost")', 1);
+    this.connected = false;
+    if (this.onclose) {
+        this.onclose(this.id);
+    }
+}
+
+DangerZone.prototype.isConnected = function(msg) {
+    return this.connected;
 }
 
 DangerZone.prototype.send = function(to, action, data) {
@@ -45,6 +55,7 @@ DangerZone.prototype.send = function(to, action, data) {
     };
     var msg = JSON.stringify(info);
     this.webSocket.send(msg);
+    this.pktSent++;
 }
 
 DangerZone.prototype.broadcast = function(action, data) {
@@ -130,6 +141,10 @@ function ActionHandler(zone) {
 ActionHandler.prototype.init = function(data) {
     this.zone.id = data;
     this.zone.nextobjid = 1;
+    this.zone.connected = true;
+    if (this.zone.onopen) {
+        this.zone.onopen(data);
+    }
 }
 
 ActionHandler.prototype.single = function(info) {
@@ -230,3 +245,24 @@ function __dispatch() {
     var fn = obj[fnName];
     return fn.apply(obj, arguments);
 }
+
+var windowAlertBackup = window.alert;
+window.alert = function(message){
+    var dialog = $("#errorDialog");
+    dialog.text(message);
+    dialog.dialog({
+        draggable: true,
+        resizable: false,
+        modal: true,
+        autoOpen: true,
+        position: 'center',
+        stack: false,
+        buttons : {
+            'Ok' : function() {
+                $("#errorDialog").dialog('close');
+            }
+        },
+        title : (arguments.length > 1) ? arguments[1] : "Alert"
+    });
+}
+
