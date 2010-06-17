@@ -8,10 +8,10 @@ function Sys(pkg) {
 }
 
 Sys.prototype.perform = function(action, data) {
-    __dispatch(this, action, data);
+    __dispatch(this, "do" + __upperFirst(action), data);
 }
 
-Sys.prototype.init = function(data) {
+Sys.prototype.doInit = function(data) {
     this.pkg.handler.id = data;
     this.pkg.handler.nextobjid = 1;
     this.pkg.handler.connected = true;
@@ -20,66 +20,74 @@ Sys.prototype.init = function(data) {
     }
 }
 
-Sys.prototype.single = function(info) {
+Sys.prototype.doPing = function(data) {
+    this.pkg.handler.send("sys", "pong", data);
+}
+
+Sys.prototype.doPong = function(data) {
+    // Just a reply to our ping, do nothing
+}
+
+Sys.prototype.doSingle = function(info) {
     var action = info.action;
     var data = info.data;
     this.pkg.handler.perform(action, data);
 }
 
-Sys.prototype.multi = function(data) {
+Sys.prototype.doMulti = function(data) {
     for (var idx in data) {
         var actdat = data[idx];
-        this.single(actdat);
+        this.doSingle(actdat);
     }
 }
 
-Sys.prototype.run = function(data) {
+Sys.prototype.doRun = function(data) {
     eval(data);
 }
 
-Sys.prototype.head = function(data) {
+Sys.prototype.doHead = function(data) {
    ContentEditor.addHead(data);
 }
 
-Sys.prototype.body = function(data) {
+Sys.prototype.doBody = function(data) {
    ContentEditor.addBody(data);
 }
 
-Sys.prototype.script = function(data) {
+Sys.prototype.doScript = function(data) {
    ContentEditor.addScript(data);
 }
 
-Sys.prototype.scriptSrc = function(data) {
+Sys.prototype.doScriptSrc = function(data) {
    ContentEditor.addScriptSrc(data);
 }
 
-Sys.prototype.css = function(data) {
+Sys.prototype.doCss = function(data) {
    ContentEditor.addCss(data);
 }
 
-Sys.prototype.cssLink = function(data) {
+Sys.prototype.doCssLink = function(data) {
    ContentEditor.addCssLink(data);
 }
 
-Sys.prototype.clients = function(data) {
+Sys.prototype.doClients = function(data) {
     for (var idx in data) {
         var client = data[idx];
         this.pkg.handler.registerClient(client)
     }
 }
 
-Sys.prototype.client = function(data) {
+Sys.prototype.doClient = function(data) {
     this.pkg.handler.registerClient(data)
 }
 
-Sys.prototype.connect = function(data) {
+Sys.prototype.doConnect = function(data) {
     this.pkg.handler.registerClient(data)
 }
 
-Sys.prototype.disconnect = function(data) {
+Sys.prototype.doDisconnect = function(data) {
     this.pkg.handler.unregisterClient(data)
 }
 
-Sys.prototype.activate = function(pkgName) {
+Sys.prototype.doActivate = function(pkgName) {
     this.pkg.handler.registerPackage(pkgName)
 }

@@ -35,7 +35,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     private long _zoneId = 1;
     
     private enum Event {
-        ready, store, remove, clear, clients, client
+        ready, store, remove, clear, clients, client, ping, pong
     }
 
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
@@ -71,6 +71,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         private static final String ACTION_CLIENT_CHANGE = "client";
         private static final String ACTION_CLIENT_CONNECT = "connect";
         private static final String ACTION_CLIENT_DISCONNECT = "disconnect";
+        private static final String ACTION_PONG = "pong";
 
         @Override
         public void onConnect(Outbound outbound) {
@@ -125,7 +126,10 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                     LinkedList<JSONObject> list = new LinkedList();
                     list.add(newActionInfo(ACTION_INIT, _socketId));
                     list.add(newActionInfo(ACTION_CLIENTS, getClientList()));
+                    list.add(newActionInfo(ACTION_ACTIVATE, "rates"));
+                    list.add(newActionInfo(ACTION_ACTIVATE, "clients"));
                     list.add(newActionInfo(ACTION_ACTIVATE, "starbutton"));
+                    list.add(newActionInfo(ACTION_ACTIVATE, "keepalive"));
                     for (String id : _storageIds) {
                         JSONObject info = _storage.get(id);
                         String action = (String) info.get("action");
@@ -133,8 +137,8 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                         list.add(newActionInfo(action, dat));
                     }
                     sendMultiple("sys", list);
-                    }
                     break;
+                }
                 case store: {
                     // Store and send the message to all connected sockets
                     JSONObject info = (JSONObject) data;
@@ -144,28 +148,38 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                     String action = (String) info.get("action");
                     Object dat = info.get("data");
                     sendAll(action, dat, false);
-                    }
                     break;
+                }
                 case remove: {
                     // "Unstore" and send the message to all conencted sockets
                     String id = (String) data;
                     _storageIds.remove(id);
                     _storage.remove(id);
-                    }
                     break;
-                case clear:
+                }
+                case clear: {
                     _storageIds.clear();
                     _storage.clear();
                     break;
-                case clients:
+                }
+                case clients: {
                     send("sys", ACTION_CLIENTS, getClientList());
                     break;
+                }
                 case client: {
                     JSONObject info = (JSONObject) data;
                     _userName = (String) info.get("name");
                     sendAll(ACTION_CLIENT_CHANGE, newClientInfo(this), true);
-                    }
                     break;
+                }
+                case ping: {
+                    send("sys", ACTION_PONG, data);
+                    break;
+                }
+                case pong: {
+                    // Do nothing
+                    break;
+                }
             }
         }
 

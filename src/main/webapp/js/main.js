@@ -32,6 +32,10 @@ function __copy(value) {
     return newvalue;
 }
 
+function __noCacheUrl(url) {
+    return url + "?ts=" + (new Date()).valueOf()
+}
+
 var windowAlertBackup = window.alert;
 window.alert = function(message){
     var dialog = $("#errorDialog");
@@ -51,6 +55,40 @@ window.alert = function(message){
         title : (arguments.length > 1) ? arguments[1] : "Alert"
     });
 }
+
+
+// ****************************************************************
+// Drag support
+// ****************************************************************
+
+var dragging = false;
+document.onmousemove = function(event) {
+    if (dragging) {
+        var diffX = event.pageX - mouseStartX;
+        var diffY = event.pageY - mouseStartY;
+        var objNewX = objStartX + diffX;
+        var objNewY = objStartY + diffY;
+        var id = draggedObj[0].id;
+
+        // TODO make this generic! This part is only meant for the Starbutton package
+        var scr = '$("#' + id + '").offset({ top: ' + objNewY + ', left: ' + objNewX + '})';
+        protocolhandler.persist("run", scr, id + '_update');
+    }
+}
+
+document.onmouseup = function(event) {
+    dragging = false;
+}
+
+$(".draggable").live("mousedown", function(event) {
+    dragging = true;
+    mouseStartX = event.pageX;
+    mouseStartY = event.pageY;
+    draggedObj = $(event.target);
+    objStartX = draggedObj.offset().left;
+    objStartY = draggedObj.offset().top;
+    return false;
+});
 
 
 // ****************************************************************
@@ -74,6 +112,7 @@ var ContentEditor = {
     },
 
     "addScriptSrc" : function(data, callback) {
+        if (console) console.log("addScriptSrc", __noCacheUrl(data));
         var tmp = document.createElement("script");
         tmp.type = 'text/javascript';
         tmp.src = data;
@@ -89,10 +128,75 @@ var ContentEditor = {
     },
 
     "addCssLink" : function(data) {
+        if (console) console.log("addCssLink", __noCacheUrl(data));
         var tmp = document.createElement("link");
         tmp.type = 'text/css';
         tmp.rel = 'stylesheet';
         tmp.href = data;
         document.getElementsByTagName('head')[0].appendChild(tmp);
     }
+};
+
+
+// ****************************************************************
+// Toolbox
+// ****************************************************************
+
+var Toolbox = {
+    "addPanel" : function(title, content) {
+        var panel;
+        var win = $("#toolbox");
+        if (win) {
+            if (win.children().length == 0) {
+                win.dialog({
+                    "resizable" : false,
+                    "position" : ['right','top'],
+                    "beforeclose" : function() { return false }
+                });
+            }
+            var id = "toolboxpanel" + this._nextPanelId++;
+            panel = $('<div><h3><a href="#">Title</a></h3><div>...</div></div>').attr("id", id);
+            panel.appendTo(win);
+            this.setPanelTitle(panel, title);
+            this.setPanelContent(panel, content);
+        }
+        return panel;
+    },
+
+    "setPanelTitle" : function(panel, title) {
+        if (panel) {
+            panel.find("h3 a").text(title);
+            this.resizePanel(panel);
+        }
+    },
+
+    "setPanelContent" : function(panel, content) {
+        if (panel) {
+            panel.find("div").html(content);
+            this.resizePanel(panel);
+        }
+    },
+
+    "resizePanel" : function(panel, content) {
+        if (panel) {
+            panel.accordion("destroy");
+            panel.accordion({
+                "collapsible" : true
+            });
+        }
+    },
+
+    "removePanel" : function(panel) {
+        var win = $("#toolbox");
+        if (win) {
+            if (panel) {
+                panel.remove();
+            }
+            if (win.children().length == 0) {
+                win.dialog("close");
+            }
+        }
+    },
+
+    "_nextPanelId" : 0
 };

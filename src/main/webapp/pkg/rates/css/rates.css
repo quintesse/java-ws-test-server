@@ -1,0 +1,12 @@
+
+.packetrates {
+    font-size: 24pt;
+}
+
+#packetratesTable {
+    width: 100%;
+}
+
+#packetratesTable td {
+    width: 50%;
+}

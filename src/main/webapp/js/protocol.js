@@ -144,7 +144,7 @@ ProtocolHandler.prototype.perform = function(action, data) {
         pkgName = action.substring(0, p);
         action = action.substr(p + 1);
     }
-    __dispatch(this.packages[pkgName], action, data);
+    this.packages[pkgName].perform(action, data);
 }
 
 // Returns a new Object ID (an ID guaranteed to be unique among all clients).
@@ -158,6 +158,8 @@ ProtocolHandler.prototype.packageUrl = function(pkgName) {
     return "/pkg/" + pkgName + "/";
 }
 
+// Loads, registers and activates the package with the given name.
+//   pkgName - the name of the package to register.
 ProtocolHandler.prototype.registerPackage = function(pkgName) {
     var handler = this;
     var clsName = __upperFirst(pkgName);
@@ -166,9 +168,50 @@ ProtocolHandler.prototype.registerPackage = function(pkgName) {
         var fn = window[clsName];
         var obj = new fn(pkg);
         handler.packages[pkgName] = obj;
+        handler.activatePackage(obj);
     });
 }
 
+// Activates the given package.
+//   pkg - the package to activate or its name.
+ProtocolHandler.prototype.activatePackage = function(pkg) {
+    if (typeof pkg == "string") {
+        pkg = this.packages[pkg];
+    }
+    if (pkg && pkg.activate) {
+        pkg.activate();
+    }
+}
+
+// Deactivates the given package.
+//   pkg - the package to deactivate or its name.
+ProtocolHandler.prototype.deactivate = function(pkg) {
+    if (typeof pkg == "string") {
+        pkg = this.packages[pkg];
+    }
+    if (pkg && pkg.deactivate) {
+        pkg.deactivate();
+    }
+}
+
+// Returns if the given package is active or not.
+//   pkg - the package or its name.
+ProtocolHandler.prototype.isActive = function(pkg) {
+    if (typeof pkg == "string") {
+        pkg = this.packages[pkg];
+    }
+    if (pkg && pkg.isActive) {
+        return pkg.isActive();
+    } else {
+        // Packages that don't have a way to activate/deactivate are assumed
+        // to be always active.
+        return true;
+    }
+}
+
+// Registers the given client. Will raise the event "onclientconnect" if the
+// client wasn't yet registered or "onclientchange" if it was.
+//   client - the client to register.
 ProtocolHandler.prototype.registerClient = function(client) {
     var handler = this;
     if (!this.clients[client.id]) {
@@ -185,6 +228,9 @@ ProtocolHandler.prototype.registerClient = function(client) {
     }
 }
 
+// Unregisters the given client. Will raise the event "onclientdisconnect"
+// if the client was in effect registered.
+//   client - the client to unregister.
 ProtocolHandler.prototype.unregisterClient = function(client) {
     var handler = this;
     if (this.clients[client.id]) {
@@ -205,10 +251,14 @@ function Package(handler, packageName) {
     this.packageName = packageName;
 }
 
-Package.prototype.loadHtml = function(name, callback) {
+Package.prototype.loadHtml = function(name, target, callback) {
     var handler = this.handler;
     $.get(handler.packageUrl(this.packageName) + "html/" + name, function(bodyData) {
-        ContentEditor.addBody(bodyData);
+        if (target) {
+            target.html(bodyData);
+        } else {
+            ContentEditor.addBody(bodyData);
+        }
         if (callback) {
             callback.apply();
         }
@@ -216,9 +266,21 @@ Package.prototype.loadHtml = function(name, callback) {
 }
 
 Package.prototype.loadScript = function(name, callback) {
-    ContentEditor.addScriptSrc(this.handler.packageUrl("starbutton") + "js/" + name, callback);
+    ContentEditor.addScriptSrc(this.handler.packageUrl(this.packageName) + "js/" + name, callback);
 }
 
 Package.prototype.loadCss = function(name) {
-    ContentEditor.addCssLink(this.handler.packageUrl("starbutton") + "css/" + name);
+    ContentEditor.addCssLink(this.handler.packageUrl(this.packageName) + "css/" + name);
+}
+
+Package.prototype.loadToolbox = function(title, name, callback) {
+    var panel = Toolbox.addPanel(title, "...");
+    var handler = this.handler;
+    $.get(handler.packageUrl(this.packageName) + "html/" + name, function(bodyData) {
+        Toolbox.setPanelContent(panel, bodyData);
+        if (callback) {
+            callback.apply();
+        }
+    });
+    return panel;
 }
