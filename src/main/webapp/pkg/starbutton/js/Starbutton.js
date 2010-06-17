@@ -34,12 +34,16 @@ function twinkle() {
     protocolhandler.persist("body", html, id + '_create');
 }
 
-function starbutton(pkg) {
+function clearStars() {
+    protocolhandler.send("sys", "clear", null);
+}
+
+function Starbutton(pkg) {
     this.pkg = pkg;
     pkg.loadHtml("main.html", function(bodyData) {
         ContentEditor.addBody("<br><b>starbutton ready.</b><br>")
     });
 }
 
-starbutton.prototype.createStar = new function() {
+Starbutton.prototype.createStar = new function() {
 }

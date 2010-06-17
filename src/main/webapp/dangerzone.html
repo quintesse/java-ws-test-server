@@ -16,6 +16,7 @@
         <script type='text/javascript' src="js/jquery-1.4.2.min.js"></script>
         <script type='text/javascript' src="js/jquery-ui-1.8.2.custom.min.js"></script>
         <script type='text/javascript' src="js/main.js"></script>
+        <script type='text/javascript' src="js/protocol.js"></script>
         <script type='text/javascript'>
             if (!window.WebSocket) {
                 alert('Sorry, you need a browser that supports WebSockets');
@@ -27,22 +28,34 @@
                 dialog.appendTo("body");
 
                 var location = document.location.toString().replace('http://','ws://').replace('https://','wss://').replace('.html','');
-                protocolhandler = new ProtocolHandler(dzOnOpen, dzOnClose);
+                var props = {
+                    "onopen" : dzOnOpen,
+                    "onclose" : dzOnClose,
+                    "onclientconnect" : showClients,
+                    "onclientdisconnect" : showClients,
+                    "onclientchange" : showClients
+                };
+                protocolhandler = new ProtocolHandler(props);
                 protocolhandler.connect(location);
             });
 
             var ratesPeriod = 2;
             var ratesInterval;
+            var clientsInterval;
             function dzOnOpen(zone) {
                 $('#main').removeClass('spinner');
                 showRates();
                 ratesInterval = setInterval(showRates, ratesPeriod * 1000);
+                showClients();
+                clientsInterval = setInterval(showClients, 5000);
             }
 
             function dzOnClose(zone) {
                 $('#main').removeClass('spinner');
                 clearInterval(ratesInterval);
                 showRates();
+                clearInterval(clientsInterval);
+                showClients();
                 setTimeout('alert("Connection lost")', 1);
             }
 
@@ -63,9 +76,37 @@
                 }
                 $('#rates').text(txt);
             }
+
+            function showClients() {
+                var txt;
+                if (protocolhandler.isConnected()) {
+                    txt = "";
+                    for (id in protocolhandler.clients) {
+                        var client = protocolhandler.clients[id];
+                        txt = txt + "<li>" + client.name + "</li>";
+                    }
+                } else {
+                    txt = 'Disconnected';
+                }
+                $('#clients').html(txt);
+            }
+
+            function setName() {
+                var me = __copy(protocolhandler.clients[protocolhandler.id]);
+                me.name = $("#name").val();
+                protocolhandler.send("sys", "client", me);
+                return false;
+            }
         </script>
     </head>
     <body id="main" class="spinner">
         <div id="rates">Disconnected</div>
+        <br>
+        <div id="clients">Disconnected</div>
+        <br>
+        <input id="name" type="text" name="name">
+        <input type="button" value="Set Name" onClick="setName()">
+        <br>
+        <br>
     </body>
 </html>

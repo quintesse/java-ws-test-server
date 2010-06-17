@@ -35,7 +35,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     private long _zoneId = 1;
     
     private enum Event {
-        ready, store, remove, clear
+        ready, store, remove, clear, clients, client
     }
 
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
@@ -62,17 +62,24 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
         private Outbound _outbound;
         private String _socketId;
+        private String _userName;
 
         private static final String ACTION_INIT = "init";
         private static final String ACTION_ACTIVATE = "activate";
         private static final String ACTION_MULTI = "multi";
+        private static final String ACTION_CLIENTS = "clients";
+        private static final String ACTION_CLIENT_CHANGE = "client";
+        private static final String ACTION_CLIENT_CONNECT = "connect";
+        private static final String ACTION_CLIENT_DISCONNECT = "disconnect";
 
         @Override
         public void onConnect(Outbound outbound) {
             logger.info(this + " onConnect");
             _outbound = outbound;
             _socketId = Long.toString(_zoneId++);
+            _userName = "Client #" + _socketId;
             _members.put(_socketId, this);
+            sendAll(ACTION_CLIENT_CONNECT, newClientInfo(this), false);
         }
 
         @Override
@@ -95,7 +102,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                     onAction(event, data);
                 } else if ("all".equals(to)) {
                     // Send the message to all conencted sockets
-                    sendAll(action, data);
+                    sendAll(action, data, false);
                 } else {
                     // Send the message to the indicated socket
                     sendTo(to, action, data);
@@ -109,19 +116,21 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         public void onDisconnect() {
             logger.info(this + " onDisconnect");
             _members.remove(_socketId);
+            sendAll(ACTION_CLIENT_DISCONNECT, newClientInfo(this), false);
         }
 
         private void onAction(Event event, Object data) {
             switch (event) {
                 case ready: {
                     LinkedList<JSONObject> list = new LinkedList();
-                    addMultiple(list, ACTION_INIT, _socketId);
-                    addMultiple(list, ACTION_ACTIVATE, "starbutton");
+                    list.add(newActionInfo(ACTION_INIT, _socketId));
+                    list.add(newActionInfo(ACTION_CLIENTS, getClientList()));
+                    list.add(newActionInfo(ACTION_ACTIVATE, "starbutton"));
                     for (String id : _storageIds) {
                         JSONObject info = _storage.get(id);
                         String action = (String) info.get("action");
                         Object dat = info.get("data");
-                        addMultiple(list, action, dat);
+                        list.add(newActionInfo(action, dat));
                     }
                     sendMultiple("sys", list);
                     }
@@ -134,7 +143,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                     _storage.put(id, info);
                     String action = (String) info.get("action");
                     Object dat = info.get("data");
-                    sendAll(action, dat);
+                    sendAll(action, dat, false);
                     }
                     break;
                 case remove: {
@@ -148,20 +157,45 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                     _storageIds.clear();
                     _storage.clear();
                     break;
+                case clients:
+                    send("sys", ACTION_CLIENTS, getClientList());
+                    break;
+                case client: {
+                    JSONObject info = (JSONObject) data;
+                    _userName = (String) info.get("name");
+                    sendAll(ACTION_CLIENT_CHANGE, newClientInfo(this), true);
+                    }
+                    break;
             }
         }
 
-        private void addMultiple(List<JSONObject> list, String action, Object data) {
+        private List<JSONObject> getClientList() {
+            LinkedList<JSONObject> list = new LinkedList();
+            for (DangerZoneWebSocket member : _members.values()) {
+                list.add(newClientInfo(member));
+            }
+            return list;
+
+        }
+        
+        private JSONObject newClientInfo(DangerZoneWebSocket member) {
+            JSONObject obj = new JSONObject();
+            obj.put("id", member._socketId);
+            obj.put("name", member._userName);
+            return obj;
+        }
+
+        private JSONObject newActionInfo(String action, Object data) {
             JSONObject obj = new JSONObject();
             obj.put("action", action);
             obj.put("data", data);
-            list.add(obj);
+            return obj;
         }
 
         private void sendMultiple(String from, Object... info) {
             LinkedList<JSONObject> list = new LinkedList();
             for (int i = 0; i < info.length; i += 2) {
-                addMultiple(list, (String) info[i], info[i + 1]);
+                list.add(newActionInfo((String) info[i], info[i + 1]));
             }
             sendMultiple(from, list);
         }
@@ -182,12 +216,13 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                 logger.error("Could not send message, disconnecting socket", e);
                 _outbound.disconnect();
                 _members.remove(_socketId);
+                sendAll(ACTION_CLIENT_DISCONNECT, newClientInfo(this), false);
             }
         }
 
-        private void sendAll(String action, Object data) {
+        private void sendAll(String action, Object data, boolean meToo) {
             for (DangerZoneWebSocket member : _members.values()) {
-                if (member != this) {
+                if (meToo || member != this) {
                     member.send(_socketId, action, data);
                 }
             }
