@@ -149,6 +149,7 @@ var Toolbox = {
         if (win) {
             if (win.children().length == 0) {
                 win.dialog({
+                    "width" : 200,
                     "resizable" : false,
                     "position" : ['right','top'],
                     "beforeclose" : function() { return false }

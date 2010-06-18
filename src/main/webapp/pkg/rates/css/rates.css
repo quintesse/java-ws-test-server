@@ -1,12 +1,22 @@
 
 .packetrates {
-    font-size: 24pt;
+    font-size: 18;
+}
+
+#packetratesOuterTable {
+    width: 100%;
+}
+
+#packetratesOuterTable td {
+    width: 50%;
 }
 
 #packetratesTable {
     width: 100%;
+    border-style: solid;
+    border-width: 1px;
 }
 
 #packetratesTable td {
-    width: 50%;
+    font-size: 7pt;
 }
