@@ -55,7 +55,8 @@ ProtocolHandler.prototype.onMessage = function(msg) {
         var action = info.action;
         var data = info.data;
         var from = info.from;
-        this.perform(action, data);
+        if (console) console.log("Incoming message:", from, "-", action, "-", data);
+        this.perform(from, action, data);
     }
 }
 
@@ -88,6 +89,7 @@ ProtocolHandler.prototype.send = function(to, action, data) {
     var msg = JSON.stringify(info);
     this.webSocket.send(msg);
     this.pktSent++;
+    if (console) console.log("Outgoing message:", to, "-", action, "-", data);
 }
 
 // Send a message over the web socket to all connected clients
@@ -97,7 +99,7 @@ ProtocolHandler.prototype.send = function(to, action, data) {
 //   data - the data necessary to complete the action (can be null).
 ProtocolHandler.prototype.broadcast = function(action, data) {
     this.send('all', action, data);
-    this.perform(action, data);
+    this.perform(this.id, action, data);
 }
 
 // Special version of the broadcast() function that sends a message
@@ -117,7 +119,7 @@ ProtocolHandler.prototype.persist = function(action, data, id) {
         "id" : id
     };
     this.send('sys', 'store', info);
-    this.perform(action, data);
+    this.perform(this.id, action, data);
 }
 
 // Special version of the broadcast() function that sends a message
@@ -135,16 +137,17 @@ ProtocolHandler.prototype.unpersist = function(action, data, id) {
 }
 
 // Peforms the specified action.
+//   from - the originator of the action
 //   action - action to perform.
 //   data - data necessary to perform the action.
-ProtocolHandler.prototype.perform = function(action, data) {
+ProtocolHandler.prototype.perform = function(from, action, data) {
     var pkgName = "sys";
     var p = action.indexOf(":");
     if (p > 0) {
         pkgName = action.substring(0, p);
         action = action.substr(p + 1);
     }
-    this.packages[pkgName].perform(action, data);
+    this.packages[pkgName].perform(from, action, data);
 }
 
 // Returns a new Object ID (an ID guaranteed to be unique among all clients).
@@ -161,15 +164,19 @@ ProtocolHandler.prototype.packageUrl = function(pkgName) {
 // Loads, registers and activates the package with the given name.
 //   pkgName - the name of the package to register.
 ProtocolHandler.prototype.registerPackage = function(pkgName) {
-    var handler = this;
-    var clsName = __upperFirst(pkgName);
-    ContentEditor.addScriptSrc(this.packageUrl(pkgName) + "js/" + clsName + ".js", function() {
-        var pkg = new Package(handler, pkgName);
-        var fn = window[clsName];
-        var obj = new fn(pkg);
-        handler.packages[pkgName] = obj;
-        handler.activatePackage(obj);
-    });
+    if (!this.packages[pkgName]) {
+        var handler = this;
+        var clsName = __upperFirst(pkgName);
+        ContentEditor.addScriptSrc(this.packageUrl(pkgName) + "js/" + clsName + ".js", function() {
+            var pkg = new Package(handler, pkgName);
+            var fn = window[clsName];
+            var obj = new fn(pkg);
+            handler.packages[pkgName] = obj;
+            handler.activatePackage(obj);
+        });
+    } else {
+        this.activatePackage(pkgName);
+    }
 }
 
 // Activates the given package.
@@ -185,7 +192,7 @@ ProtocolHandler.prototype.activatePackage = function(pkg) {
 
 // Deactivates the given package.
 //   pkg - the package to deactivate or its name.
-ProtocolHandler.prototype.deactivate = function(pkg) {
+ProtocolHandler.prototype.deactivatePackage = function(pkg) {
     if (typeof pkg == "string") {
         pkg = this.packages[pkg];
     }
@@ -283,4 +290,23 @@ Package.prototype.loadToolbox = function(title, name, callback) {
         }
     });
     return panel;
+}
+
+// Send a message over the web socket to the equivalent package on the other side
+//   to - the recipient of the message. Use 'sys' for packets directed
+//        to the server and 'all' to broadcast to all connected clients
+//        (except for one where the packet originated).
+//   action - the action that should be performed.
+//   data - the data necessary to complete the action (can be null).
+Package.prototype.send = function(to, action, data) {
+    this.handler.send(to, this.packageName + ":" + action, data);
+}
+
+// Send a message over the web socket to the equivalent package for all
+// connected clients (except for one where the packet originated).
+// And performs the indicated action locally as well.
+//   action - the action that should be performed.
+//   data - the data necessary to complete the action (can be null).
+Package.prototype.broadcast = function(action, data) {
+    this.handler.broadcast(this.packageName + ":" + action, data);
 }

@@ -20,7 +20,7 @@ Rates.prototype.activate = function() {
 Rates.prototype.deactivate = function() {
     if (this.toolbox) {
         clearInterval(this.interval);
-        showRates();
+        this.showRates();
         Toolbox.removePanel(this.toolbox);
         delete this.toolbox;
     }

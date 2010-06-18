@@ -31,11 +31,15 @@ Starbutton.prototype.isActive = function() {
 Starbutton.prototype.twinkle = function() {
     var x = Math.floor(Math.random() * 500);
     var y = Math.floor(Math.random() * 500);
-    var id = this.pkg.handler.getNewId();
-    var html = '<img id="' + id + '" class="draggable" src="/pkg/starbutton/img/star.jpg" style="position:absolute; left:' + x + 'px; top:' + y + 'px; width:50px; height:50px" />';
+    var id = "star_" + this.pkg.handler.getNewId();
+    var html = '<img id="' + id + '" class="star draggable" src="/pkg/starbutton/img/star.jpg" style="position:absolute; left:' + x + 'px; top:' + y + 'px; width:50px; height:50px" />';
     this.pkg.handler.persist("body", html, id + '_create');
 }
 
 Starbutton.prototype.clear = function() {
-    this.pkg.handler.send("sys", "clear", null);
+    var starbutton = this;
+    $(".star").each(function(idx, star) {
+        var id = star.id;
+        starbutton.pkg.handler.unpersist("run", '$("#' + id + '").remove()', [id + '_create', id + '_update']);
+    });
 }

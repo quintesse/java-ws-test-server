@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
@@ -127,9 +128,6 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                     list.add(newActionInfo(ACTION_INIT, _socketId));
                     list.add(newActionInfo(ACTION_CLIENTS, getClientList()));
                     list.add(newActionInfo(ACTION_ACTIVATE, "rates"));
-                    list.add(newActionInfo(ACTION_ACTIVATE, "clients"));
-                    list.add(newActionInfo(ACTION_ACTIVATE, "starbutton"));
-                    list.add(newActionInfo(ACTION_ACTIVATE, "keepalive"));
                     for (String id : _storageIds) {
                         JSONObject info = _storage.get(id);
                         String action = (String) info.get("action");
@@ -151,10 +149,19 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                     break;
                 }
                 case remove: {
-                    // "Unstore" and send the message to all conencted sockets
-                    String id = (String) data;
-                    _storageIds.remove(id);
-                    _storage.remove(id);
+                    // "Unstore" and send the message to all connected sockets
+                    if (data instanceof JSONArray) {
+                        JSONArray a = (JSONArray) data;
+                        for (Object dat : a) {
+                            String id = (String) dat;
+                            _storageIds.remove(id);
+                            _storage.remove(id);
+                        }
+                    } else {
+                        String id = (String) data;
+                        _storageIds.remove(id);
+                        _storage.remove(id);
+                    }
                     break;
                 }
                 case clear: {

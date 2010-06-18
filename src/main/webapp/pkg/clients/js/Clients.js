@@ -25,7 +25,7 @@ Clients.prototype.activate = function() {
 Clients.prototype.deactivate = function() {
     if (this.toolbox) {
         clearInterval(this.interval);
-        showClients();
+        this.showClients();
         Toolbox.removePanel(this.toolbox);
         delete this.toolbox;
     }
