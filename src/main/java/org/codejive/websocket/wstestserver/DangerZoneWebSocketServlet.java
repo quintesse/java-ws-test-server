@@ -11,13 +11,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.servlet.ServletConfig;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.codejive.rws.RwsObject;
+import org.codejive.rws.RwsRegistry;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 import org.json.simple.JSONArray;
@@ -36,20 +37,24 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     private long _zoneId = 1;
     
     private enum Event {
-        ready, store, remove, clear, clients, client, ping, pong
+        ready, store, remove, clear, clients, client, ping, pong, call
     }
 
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws javax.servlet.ServletException, IOException {
-        getServletContext().getNamedDispatcher("default").forward(request, response);
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+
+        RwsObject pkg = new RwsObject("Package", new Package(config), new String[] { "listPackages" });
+
+        RwsRegistry.register(pkg);
     }
 
     @Override
-    public void service(ServletRequest req, ServletResponse res) throws ServletException, IOException {
-        super.service(req, res);
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws javax.servlet.ServletException, IOException {
+        getServletContext().getNamedDispatcher("default").forward(request, response);
     }
 
     @Override
@@ -73,6 +78,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         private static final String ACTION_CLIENT_CONNECT = "connect";
         private static final String ACTION_CLIENT_DISCONNECT = "disconnect";
         private static final String ACTION_PONG = "pong";
+        private static final String ACTION_CALL_RESULT = "result";
 
         @Override
         public void onConnect(Outbound outbound) {
@@ -81,7 +87,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             _socketId = Long.toString(_zoneId++);
             _userName = "Client #" + _socketId;
             _members.put(_socketId, this);
-            sendAll(ACTION_CLIENT_CONNECT, newClientInfo(this), false);
+            sendAll("sys", ACTION_CLIENT_CONNECT, newClientInfo(this), false);
         }
 
         @Override
@@ -103,7 +109,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                     Event event = Event.valueOf(action.toLowerCase());
                     onAction(event, data);
                 } else if ("all".equals(to)) {
-                    // Send the message to all conencted sockets
+                    // Send the message to all connected sockets
                     sendAll(action, data, false);
                 } else {
                     // Send the message to the indicated socket
@@ -118,76 +124,142 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         public void onDisconnect() {
             logger.info(this + " onDisconnect");
             _members.remove(_socketId);
-            sendAll(ACTION_CLIENT_DISCONNECT, newClientInfo(this), false);
+            sendAll("sys", ACTION_CLIENT_DISCONNECT, newClientInfo(this), false);
         }
 
         private void onAction(Event event, Object data) {
             switch (event) {
-                case ready: {
-                    LinkedList<JSONObject> list = new LinkedList();
-                    list.add(newActionInfo(ACTION_INIT, _socketId));
-                    list.add(newActionInfo(ACTION_CLIENTS, getClientList()));
-                    list.add(newActionInfo(ACTION_ACTIVATE, "rates"));
-                    for (String id : _storageIds) {
-                        JSONObject info = _storage.get(id);
-                        String action = (String) info.get("action");
-                        Object dat = info.get("data");
-                        list.add(newActionInfo(action, dat));
-                    }
-                    sendMultiple("sys", list);
+                case ready:
+                    doReady();
                     break;
-                }
-                case store: {
-                    // Store and send the message to all connected sockets
-                    JSONObject info = (JSONObject) data;
-                    String id = (String) info.get("id");
-                    _storageIds.add(id);
-                    _storage.put(id, info);
-                    String action = (String) info.get("action");
-                    Object dat = info.get("data");
-                    sendAll(action, dat, false);
+                case store:
+                    doStore(data);
                     break;
-                }
-                case remove: {
-                    // "Unstore" and send the message to all connected sockets
-                    if (data instanceof JSONArray) {
-                        JSONArray a = (JSONArray) data;
-                        for (Object dat : a) {
-                            String id = (String) dat;
-                            _storageIds.remove(id);
-                            _storage.remove(id);
-                        }
-                    } else {
-                        String id = (String) data;
-                        _storageIds.remove(id);
-                        _storage.remove(id);
-                    }
+                case remove:
+                    doRemove(data);
                     break;
-                }
-                case clear: {
-                    _storageIds.clear();
-                    _storage.clear();
+                case clear:
+                    doClear(data);
                     break;
-                }
-                case clients: {
-                    send("sys", ACTION_CLIENTS, getClientList());
+                case clients:
+                    doClients();
                     break;
-                }
-                case client: {
-                    JSONObject info = (JSONObject) data;
-                    _userName = (String) info.get("name");
-                    sendAll(ACTION_CLIENT_CHANGE, newClientInfo(this), true);
+                case client:
+                    doClient(data);
                     break;
-                }
-                case ping: {
-                    send("sys", ACTION_PONG, data);
+                case ping:
+                    doPing(data);
                     break;
-                }
-                case pong: {
+                case pong:
                     // Do nothing
                     break;
+                case call:
+                    doCall(data);
+                    break;
+            }
+        }
+
+        private void doReady() {
+            LinkedList<JSONObject> list = new LinkedList();
+            list.add(newActionInfo(ACTION_INIT, _socketId));
+            list.add(newActionInfo(ACTION_CLIENTS, getClientList()));
+            list.add(newActionInfo(ACTION_ACTIVATE, "rates"));
+            for (String id : _storageIds) {
+                JSONObject info = _storage.get(id);
+                String action = (String) info.get("action");
+                Object dat = info.get("data");
+                list.add(newActionInfo(action, dat));
+            }
+            sendMultiple("sys", list);
+        }
+
+        private void doStore(Object data) {
+            // Store and send the message to all connected sockets
+            JSONObject info = (JSONObject) data;
+            String id = (String) info.get("id");
+            _storageIds.add(id);
+            _storage.put(id, info);
+            String action = (String) info.get("action");
+            Object dat = info.get("data");
+            sendAll(action, dat, false);
+        }
+
+        private void doRemove(Object data) {
+            // "Unstore" and send the message to all connected sockets
+            if (data instanceof JSONArray) {
+                JSONArray a = (JSONArray) data;
+                for (Object dat : a) {
+                    String id = (String) dat;
+                    _storageIds.remove(id);
+                    _storage.remove(id);
+                }
+            } else {
+                String id = (String) data;
+                _storageIds.remove(id);
+                _storage.remove(id);
+            }
+        }
+
+        private void doClear(Object data) {
+            _storageIds.clear();
+            _storage.clear();
+        }
+
+        private void doClients() {
+            send("sys", ACTION_CLIENTS, getClientList());
+        }
+
+        private void doClient(Object data) {
+            JSONObject info = (JSONObject) data;
+            _userName = (String) info.get("name");
+            sendAll("sys", ACTION_CLIENT_CHANGE, newClientInfo(this), true);
+        }
+
+        private void doPing(Object data) {
+            send("sys", ACTION_PONG, data);
+        }
+
+        private void doCall(Object data) {
+            JSONObject info = (JSONObject) data;
+            String id = (String) info.get("id"); // If null the caller is not interested in the result!
+            String obj = (String) info.get("object");
+            String method = (String) info.get("method");
+            Object params = (Object) info.get("params");
+
+            Object[] args = null;
+            if (params != null) {
+                if (params instanceof JSONArray) {
+                    args = ((JSONArray)params).toArray();
+                } else {
+                    args = new Object[1];
+                    args[0] = params;
                 }
             }
+            
+            try {
+                Object result = RwsRegistry.call(obj, method, args);
+                if (id != null) {
+                    send("sys", ACTION_CALL_RESULT, newCallResult(id, result));
+                }
+            } catch (Throwable th) {
+                if (id != null) {
+                    send("sys", ACTION_CALL_RESULT, newCallException(id, th));
+                }
+            }
+        }
+
+        private JSONObject newCallResult(String id, Object data) {
+            JSONObject obj = new JSONObject();
+            obj.put("id", id);
+            obj.put("result", data);
+            return obj;
+        }
+
+        private JSONObject newCallException(String id, Throwable th) {
+            JSONObject obj = new JSONObject();
+            obj.put("id", id);
+            obj.put("exception", th.toString());
+            return obj;
         }
 
         private List<JSONObject> getClientList() {
@@ -237,16 +309,24 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                 logger.error("Could not send message, disconnecting socket", e);
                 _outbound.disconnect();
                 _members.remove(_socketId);
-                sendAll(ACTION_CLIENT_DISCONNECT, newClientInfo(this), false);
+                sendAll("sys", ACTION_CLIENT_DISCONNECT, newClientInfo(this), false);
             }
         }
 
         private void sendAll(String action, Object data, boolean meToo) {
+            sendAll(_socketId, action, data, meToo);
+        }
+
+        private void sendAll(String from, String action, Object data, boolean meToo) {
             for (DangerZoneWebSocket member : _members.values()) {
                 if (meToo || member != this) {
-                    member.send(_socketId, action, data);
+                    member.send(from, action, data);
                 }
             }
+        }
+
+        private void sendTo(String action, Object data) {
+            sendTo(_socketId, action, data);
         }
 
         private void sendTo(String to, String action, Object data) {
@@ -254,6 +334,23 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             if (member != null) {
                 member.send(_socketId, action, data);
             }
+        }
+    }
+
+    static class Package {
+        private ServletConfig config;
+
+        private static final String[] packages = new String[] {
+            "chat", "clients", "keepalive", "rates", "starbutton", "sys"
+        };
+
+        public Package(ServletConfig config) {
+            this.config = config;
+        }
+
+        public String[] listPackages() {
+            // TODO Make this dynamic!!
+            return packages;
         }
     }
 }

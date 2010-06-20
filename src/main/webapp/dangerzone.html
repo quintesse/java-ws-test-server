@@ -38,9 +38,6 @@
                 var props = {
                     "onopen" : dzOnOpen,
                     "onclose" : dzOnClose
-//                    "onclientconnect" : showClients,
-//                    "onclientdisconnect" : showClients,
-//                    "onclientchange" : showClients
                 };
                 protocolhandler = new ProtocolHandler(props);
                 protocolhandler.connect(location);
@@ -54,10 +51,20 @@
                 $('#main').removeClass('spinner');
                 setTimeout('alert("Connection lost")', 1);
             }
+
+            function tryRmi() {
+                protocolhandler.call("sys", "listPackages", "Package", function(data) {
+                    alert("Ok " + data);
+                }, function(ex) {
+                    alert("Err " + ex);
+                });
+            }
         </script>
     </head>
     <body id="main" class="spinner">
         <div id="errorDialog"></div>
         <div id="toolbox" title="Toolbox"></div>
+
+        <input type="button" value="Click Me" onclick="tryRmi()">
     </body>
 </html>

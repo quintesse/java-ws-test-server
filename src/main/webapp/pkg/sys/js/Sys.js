@@ -42,6 +42,7 @@ Sys.prototype.deactivate = function() {
 Sys.prototype.doInit = function(from, data) {
     this.pkg.handler.id = data;
     this.pkg.handler.nextobjid = 1;
+    this.pkg.handler.futures = {};
     this.pkg.handler.connected = true;
     if (this.pkg.handler.onopen) {
         this.pkg.handler.onopen(this.handler);
@@ -56,10 +57,10 @@ Sys.prototype.doPong = function(from, data) {
     // Just a reply to our ping, do nothing
 }
 
-Sys.prototype.doSingle = function(from, info) {
-    var action = info.action;
-    var data = info.data;
-    this.pkg.handler.perform(from, action, data);
+Sys.prototype.doSingle = function(from, data) {
+    var act = data.action;
+    var dat = data.data;
+    this.pkg.handler.perform(from, act, dat);
 }
 
 Sys.prototype.doMulti = function(from, data) {
@@ -116,6 +117,39 @@ Sys.prototype.doDisconnect = function(from, data) {
     this.pkg.handler.unregisterClient(data)
 }
 
-Sys.prototype.doActivate = function(from, pkgName) {
-    this.pkg.handler.registerPackage(pkgName)
+Sys.prototype.doActivate = function(from, data) {
+    this.pkg.handler.registerPackage(data)
+}
+
+Sys.prototype.doCall = function(from, data) {
+    var id = data.id;
+    var obj = (data.object) ? window[data.object] : window;
+    var method = data.method;
+    var params = data.params;
+    var fn = obj[method];
+
+    var res = {
+        "id" : id
+    };
+    try {
+        res.result = fn.apply(obj, params);
+    } catch (ex) {
+        res.exception = ex;
+    }
+    this.pkg.handler.send(from, "result", res);
+}
+
+Sys.prototype.doResult = function(from, data) {
+    var id = data.id;
+    var fut = this.pkg.handler.futures[id];
+    if (fut) {
+        if (data.exception && fut.failure) {
+            fut.failure(data.exception);
+        } else {
+            fut.success(data.result);
+        }
+        delete this.pkg.handler.futures[id];
+    } else {
+        if (console) console.warn("Unknown RESULT received from", from, "with", data);
+    }
 }

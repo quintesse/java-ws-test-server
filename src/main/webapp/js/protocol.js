@@ -136,6 +136,44 @@ ProtocolHandler.prototype.unpersist = function(action, data, id) {
     this.broadcast(action, data);
 }
 
+// Returns a new Object ID (an ID guaranteed to be unique among all clients).
+ProtocolHandler.prototype.getNewId = function() {
+    return this.id + "_" + this.nextobjid++;
+}
+
+// Performs a remote method call on the server or another client
+//   to - the id of the remote site ("sys" for server)
+//   method - the name of the method to call
+//   objName - the name of the remote object (can be undefined for global context)
+//   onSuccess - the function to call with the result (can be undefined)
+//   onFailure - the function to call when a remote error occurred (can be undefined)
+ProtocolHandler.prototype.call = function() {
+    var to = Array.prototype.shift.call(arguments);
+    var method = Array.prototype.shift.call(arguments);
+    var objName = Array.prototype.shift.call(arguments);
+    var onSuccess = Array.prototype.shift.call(arguments);
+    var onFailure = Array.prototype.shift.call(arguments);
+
+    var info = {
+        "method" : method,
+        "args" : arguments
+    }
+    if (objName) {
+        info["object"] = objName;
+    }
+
+    if (onSuccess || onFailure) {
+        var id = this.getNewId();
+        info["id"] = id;
+        this.futures[id] = {
+            "success" : onSuccess,
+            "failure" : onFailure
+        };
+    }
+
+    this.send(to, 'call', info);
+}
+
 // Peforms the specified action.
 //   from - the originator of the action
 //   action - action to perform.
@@ -148,11 +186,6 @@ ProtocolHandler.prototype.perform = function(from, action, data) {
         action = action.substr(p + 1);
     }
     this.packages[pkgName].perform(from, action, data);
-}
-
-// Returns a new Object ID (an ID guaranteed to be unique among all clients).
-ProtocolHandler.prototype.getNewId = function() {
-    return this.id + "_" + this.nextobjid++;
 }
 
 // Returns the local URL for the given package name.
