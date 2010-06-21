@@ -23,6 +23,7 @@ function ProtocolHandler(props) {
     this.connected = false;
     this.packages = {};
     this.clients = {};
+    this.exceptionHandler = function(ex) { alert('RWS Error: ' + ex) }
     this.registerPackage("sys");
 }
 
@@ -102,40 +103,6 @@ ProtocolHandler.prototype.broadcast = function(action, data) {
     this.perform(this.id, action, data);
 }
 
-// Special version of the broadcast() function that sends a message
-// over the web socket to all connected clients (except for one where
-// the packet originated) telling the server to store a copy of it
-// using the specified identifier. The server will automatically "replay"
-// stored messages to new clients making statefull objects possible.
-// And finally it performs the indicated action locally as well.
-//   action - the action that should be performed.
-//   data - the data necessary to complete the action (can be null).
-//   id - the identifier to asociate with the stored action on the server.
-ProtocolHandler.prototype.persist = function(action, data, id) {
-    var info = {
-        "to" : "all",
-        "action" : action,
-        "data" : data,
-        "id" : id
-    };
-    this.send('sys', 'store', info);
-    this.perform(this.id, action, data);
-}
-
-// Special version of the broadcast() function that sends a message
-// over the web socket to all connected clients (except for one where
-// the packet originated) telling the server to remove a previously
-// stored message with the same identifier. The server will not "replay"
-// that message to new clients anymore.
-// And finally it performs the indicated action locally as well.
-//   action - the action that should be performed.
-//   data - the data necessary to complete the action (can be null).
-//   id - the identifier of the stored action to remove from the server.
-ProtocolHandler.prototype.unpersist = function(action, data, id) {
-    this.send('sys', 'remove', id);
-    this.broadcast(action, data);
-}
-
 // Returns a new Object ID (an ID guaranteed to be unique among all clients).
 ProtocolHandler.prototype.getNewId = function() {
     return this.id + "_" + this.nextobjid++;
@@ -155,14 +122,19 @@ ProtocolHandler.prototype.call = function() {
     var onFailure = Array.prototype.shift.call(arguments);
 
     var info = {
-        "method" : method,
-        "args" : arguments
+        "method" : method
+    }
+    if (arguments.length > 0) {
+        info["params"] = arguments;
     }
     if (objName) {
         info["object"] = objName;
     }
 
     if (onSuccess || onFailure) {
+        if (!onFailure) {
+            onFailure = this.exceptionHandler;
+        }
         var id = this.getNewId();
         info["id"] = id;
         this.futures[id] = {

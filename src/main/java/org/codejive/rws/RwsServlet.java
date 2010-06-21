@@ -7,13 +7,17 @@ package org.codejive.rws;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Method;
 import java.util.Set;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.codejive.rws.RwsObject.Scope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.codejive.websocket.wstestserver.Package;
 
 /**
  *
@@ -22,6 +26,18 @@ import org.slf4j.LoggerFactory;
 public class RwsServlet extends HttpServlet {
 
     private static final Logger log = LoggerFactory.getLogger(RwsServlet.class);
+
+    @Override
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+
+        // TODO Make this configurable!
+        
+        RwsObject pkg = new RwsObject("Package", Package.class, Scope.global, new String[] { "listPackages" });
+        pkg.setTargetObject(null, new Package(config));
+        
+        RwsRegistry.register(pkg);
+    }
     
     /** 
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
@@ -33,35 +49,22 @@ public class RwsServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
         String path = request.getPathInfo();
-        log.debug("Incoming request: %s", path);
-        if ("/rws.js".equals(path)) {
+        log.debug("Incoming request: {}", path);
+        if (path == null) {
+            log.debug("Return overview page");
+            generateOverview(response);
+        } else if ("/rws.js".equals(path)) {
             log.debug("Return main script");
             // TODO return global JS page needed for all object
         } else if (path.startsWith("/object/")) {
-            String objName = path.substring(8);
-            log.debug("Requesting object script for '" + objName + "'");
+            String objName = path.substring(8, path.length() - 3);
+            log.debug("Requesting object script for '{}'", objName);
             RwsObject rwsObject = RwsRegistry.getObject(objName);
             if (rwsObject != null) {
                 generateObjectScript(response, rwsObject);
             } else {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unknown RWS object '" + objName + "'");
             }
-        }
-        response.setContentType("text/html;charset=UTF-8");
-        PrintWriter out = response.getWriter();
-        try {
-            /* TODO output your page here
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet RwsServlet</title>");  
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet RwsServlet at " + request.getContextPath () + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
-            */
-        } finally { 
-            out.close();
         }
     } 
 
@@ -108,16 +111,20 @@ public class RwsServlet extends HttpServlet {
         response.setContentType("text/javascript; charset=UTF-8");
         PrintWriter out = response.getWriter();
         try {
-            Object obj = rwsObject.getTargetObject();
-
             out.println("if (!" + rwsObject.getName() + ") var " + rwsObject.getName() + " = {};");
 
             Set<String> methodNames = rwsObject.getMethodNames();
             for (String methodName : methodNames) {
-                String params = generateParameters(obj, methodName);
-                out.println(rwsObject.getName() + "." + methodName + " = function(" + params + ") {");
-                out.println("    dangerzone.call('sys', '" + methodName + "', '" + rwsObject.getName() + "', " + params + ")");
-                out.println("}");
+                String params = generateParameters(rwsObject, methodName);
+                if (params.length() > 0) {
+                    out.println(rwsObject.getName() + "." + methodName + " = function(" + params + ", onsuccess, onfailure) {");
+                    out.println("    protocolhandler.call('sys', '" + methodName + "', '" + rwsObject.getName() + "', onsuccess, onfailure, " + params + ")");
+                    out.println("}");
+                } else {
+                    out.println(rwsObject.getName() + "." + methodName + " = function(onsuccess, onfailure) {");
+                    out.println("    protocolhandler.call('sys', '" + methodName + "', '" + rwsObject.getName() + "', onsuccess, onfailure)");
+                    out.println("}");
+                }
             }
         } catch (RwsException ex) {
             throw new ServletException("Could not generate object script for " + rwsObject.getName());
@@ -126,8 +133,34 @@ public class RwsServlet extends HttpServlet {
         }
     }
 
-    private String generateParameters(Object obj, String methodName) {
-        Method[] m = obj.getClass().getMethods();
+    private String generateParameters(RwsObject rwsObject, String methodName) throws RwsException {
+        StringBuilder result = new StringBuilder();
+        Method m = rwsObject.getTargetMethod(methodName);
+        for (int i = 0; i < m.getParameterTypes().length; i++) {
+            if (i > 0) {
+                result.append(", ");
+            }
+            result.append("p");
+            result.append(i);
+        }
+        return result.toString();
+    }
+
+    private void generateOverview(HttpServletResponse response) throws IOException {
+        response.setContentType("text/html;charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        try {
+            out.println("<html>");
+            out.println("<head>");
+            out.println("<title>RWS Objects</title>");
+            out.println("</head>");
+            out.println("<body>");
+            out.println("<h1>RWS Objects</h1>");
+            out.println("</body>");
+            out.println("</html>");
+        } finally {
+            out.close();
+        }
     }
 
 }

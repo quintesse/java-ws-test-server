@@ -19,12 +19,12 @@ public class RwsRegistry {
     private static final Logger log = LoggerFactory.getLogger(RwsRegistry.class);
 
     public static void register(RwsObject obj) {
-        log.info("Registering object %s", obj);
+        log.info("Registering object {}", obj);
         rmiObjects.put(obj.getName(), obj);
     }
 
     public static void unregister(RwsObject obj) {
-        log.info("Un-registering object %s", obj);
+        log.info("Un-registering object {}", obj);
         rmiObjects.remove(obj.getName());
     }
 
@@ -40,11 +40,11 @@ public class RwsRegistry {
         return rmiObjects.get(objName);
     }
     
-    public static Object call(String objName, String method, Object[] args) throws RwsException {
-        log.debug("Calling method %s on object %s", method, objName);
+    public static Object call(RwsContext context, String objName, String method, Object[] args) throws RwsException {
+        log.debug("Calling method {} on object {}", method, objName);
         RwsObject obj = rmiObjects.get(objName);
         if (obj != null) {
-            return obj.call(method, args);
+            return obj.call(context, method, args);
         } else {
             throw new RwsException("Unknown object '" + objName + "'");
         }

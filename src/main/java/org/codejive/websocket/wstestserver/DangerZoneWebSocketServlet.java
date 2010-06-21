@@ -8,20 +8,19 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.ServletConfig;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.codejive.rws.RwsContext;
 
 import org.codejive.rws.RwsObject;
+import org.codejive.rws.RwsObject.Scope;
 import org.codejive.rws.RwsRegistry;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
@@ -32,12 +31,11 @@ import org.slf4j.LoggerFactory;
 public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
     private final Map<String, DangerZoneWebSocket> _members = new ConcurrentHashMap<String, DangerZoneWebSocket>();
-    private final Set<String> _storageIds = new CopyOnWriteArraySet<String>();
-    private final Map<String, JSONObject> _storage = new ConcurrentHashMap<String, JSONObject>();
+    private final MessageStore _msgStore = new MessageStore();
     private long _zoneId = 1;
     
     private enum Event {
-        ready, store, remove, clear, clients, client, ping, pong, call
+        ready, client, ping, pong, call
     }
 
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
@@ -46,9 +44,15 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
 
-        RwsObject pkg = new RwsObject("Package", new Package(config), new String[] { "listPackages" });
+        // TODO Make this configurable!
 
-        RwsRegistry.register(pkg);
+        RwsObject srv = new RwsObject("Server", this.getClass(), Scope.global, new String[] { "listClients" });
+        srv.setTargetObject(null, this);
+        RwsRegistry.register(srv);
+        
+        RwsObject store = new RwsObject("MsgStore", MessageStore.class, Scope.global, new String[] { "getNames", "getMessages", "get", "store", "remove", "clear" });
+        store.setTargetObject(null, _msgStore);
+        RwsRegistry.register(store);
     }
 
     @Override
@@ -62,6 +66,21 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         return new DangerZoneWebSocket();
     }
 
+    public List<JSONObject> listClients() {
+        LinkedList<JSONObject> list = new LinkedList();
+        for (DangerZoneWebSocket member : _members.values()) {
+            list.add(newClientInfo(member));
+        }
+        return list;
+    }
+
+    private JSONObject newClientInfo(DangerZoneWebSocket member) {
+        JSONObject obj = new JSONObject();
+        obj.put("id", member._socketId);
+        obj.put("name", member._userName);
+        return obj;
+    }
+
     /* ------------------------------------------------------------ */
     /* ------------------------------------------------------------ */
     class DangerZoneWebSocket implements WebSocket {
@@ -69,11 +88,11 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         private Outbound _outbound;
         private String _socketId;
         private String _userName;
+        private RwsContext _context;
 
         private static final String ACTION_INIT = "init";
         private static final String ACTION_ACTIVATE = "activate";
         private static final String ACTION_MULTI = "multi";
-        private static final String ACTION_CLIENTS = "clients";
         private static final String ACTION_CLIENT_CHANGE = "client";
         private static final String ACTION_CLIENT_CONNECT = "connect";
         private static final String ACTION_CLIENT_DISCONNECT = "disconnect";
@@ -86,6 +105,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             _outbound = outbound;
             _socketId = Long.toString(_zoneId++);
             _userName = "Client #" + _socketId;
+            _context = new RwsContext(this);
             _members.put(_socketId, this);
             sendAll("sys", ACTION_CLIENT_CONNECT, newClientInfo(this), false);
         }
@@ -123,6 +143,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         @Override
         public void onDisconnect() {
             logger.info(this + " onDisconnect");
+            _context = null;
             _members.remove(_socketId);
             sendAll("sys", ACTION_CLIENT_DISCONNECT, newClientInfo(this), false);
         }
@@ -131,18 +152,6 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             switch (event) {
                 case ready:
                     doReady();
-                    break;
-                case store:
-                    doStore(data);
-                    break;
-                case remove:
-                    doRemove(data);
-                    break;
-                case clear:
-                    doClear(data);
-                    break;
-                case clients:
-                    doClients();
                     break;
                 case client:
                     doClient(data);
@@ -162,51 +171,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         private void doReady() {
             LinkedList<JSONObject> list = new LinkedList();
             list.add(newActionInfo(ACTION_INIT, _socketId));
-            list.add(newActionInfo(ACTION_CLIENTS, getClientList()));
-            list.add(newActionInfo(ACTION_ACTIVATE, "rates"));
-            for (String id : _storageIds) {
-                JSONObject info = _storage.get(id);
-                String action = (String) info.get("action");
-                Object dat = info.get("data");
-                list.add(newActionInfo(action, dat));
-            }
             sendMultiple("sys", list);
-        }
-
-        private void doStore(Object data) {
-            // Store and send the message to all connected sockets
-            JSONObject info = (JSONObject) data;
-            String id = (String) info.get("id");
-            _storageIds.add(id);
-            _storage.put(id, info);
-            String action = (String) info.get("action");
-            Object dat = info.get("data");
-            sendAll(action, dat, false);
-        }
-
-        private void doRemove(Object data) {
-            // "Unstore" and send the message to all connected sockets
-            if (data instanceof JSONArray) {
-                JSONArray a = (JSONArray) data;
-                for (Object dat : a) {
-                    String id = (String) dat;
-                    _storageIds.remove(id);
-                    _storage.remove(id);
-                }
-            } else {
-                String id = (String) data;
-                _storageIds.remove(id);
-                _storage.remove(id);
-            }
-        }
-
-        private void doClear(Object data) {
-            _storageIds.clear();
-            _storage.clear();
-        }
-
-        private void doClients() {
-            send("sys", ACTION_CLIENTS, getClientList());
         }
 
         private void doClient(Object data) {
@@ -227,21 +192,22 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             Object params = (Object) info.get("params");
 
             Object[] args = null;
-            if (params != null) {
-                if (params instanceof JSONArray) {
-                    args = ((JSONArray)params).toArray();
-                } else {
-                    args = new Object[1];
-                    args[0] = params;
+            // Convert parameter map to array
+            if (params != null && params instanceof JSONObject) {
+                JSONObject p = (JSONObject) params;
+                args = new Object[p.size()];
+                for (int i = 0; i < p.size(); i++) {
+                    args[i] = p.get(Integer.toString(i));
                 }
             }
             
             try {
-                Object result = RwsRegistry.call(obj, method, args);
+                Object result = RwsRegistry.call(_context, obj, method, args);
                 if (id != null) {
                     send("sys", ACTION_CALL_RESULT, newCallResult(id, result));
                 }
             } catch (Throwable th) {
+                logger.error("Rws Call failed", th);
                 if (id != null) {
                     send("sys", ACTION_CALL_RESULT, newCallException(id, th));
                 }
@@ -259,22 +225,6 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             JSONObject obj = new JSONObject();
             obj.put("id", id);
             obj.put("exception", th.toString());
-            return obj;
-        }
-
-        private List<JSONObject> getClientList() {
-            LinkedList<JSONObject> list = new LinkedList();
-            for (DangerZoneWebSocket member : _members.values()) {
-                list.add(newClientInfo(member));
-            }
-            return list;
-
-        }
-        
-        private JSONObject newClientInfo(DangerZoneWebSocket member) {
-            JSONObject obj = new JSONObject();
-            obj.put("id", member._socketId);
-            obj.put("name", member._userName);
             return obj;
         }
 
@@ -308,6 +258,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             } catch (IOException e) {
                 logger.error("Could not send message, disconnecting socket", e);
                 _outbound.disconnect();
+                _context = null;
                 _members.remove(_socketId);
                 sendAll("sys", ACTION_CLIENT_DISCONNECT, newClientInfo(this), false);
             }
@@ -334,23 +285,6 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             if (member != null) {
                 member.send(_socketId, action, data);
             }
-        }
-    }
-
-    static class Package {
-        private ServletConfig config;
-
-        private static final String[] packages = new String[] {
-            "chat", "clients", "keepalive", "rates", "starbutton", "sys"
-        };
-
-        public Package(ServletConfig config) {
-            this.config = config;
-        }
-
-        public String[] listPackages() {
-            // TODO Make this dynamic!!
-            return packages;
         }
     }
 }

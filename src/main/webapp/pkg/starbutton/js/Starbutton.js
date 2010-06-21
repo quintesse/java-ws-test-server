@@ -9,6 +9,14 @@ Starbutton.prototype.activate = function() {
         this.toolbox = this.pkg.loadToolbox("Starbutton", "starbutton.html", function() {
             $("#starbuttonTwinkle").click(function() { starbutton.twinkle() });
             $("#starbuttonClear").click(function() { starbutton.clear() });
+            MsgStore.getMessages(function(data) {
+                for (idx in data) {
+                    var info = data[idx];
+                    var act = info.action;
+                    var dat = info.data;
+                    starbutton.pkg.handler.perform("sys", act, dat);
+                }
+            })
         });
     }
 }
@@ -33,13 +41,16 @@ Starbutton.prototype.twinkle = function() {
     var y = Math.floor(Math.random() * 500);
     var id = "star_" + this.pkg.handler.getNewId();
     var html = '<img id="' + id + '" class="star draggable" src="/pkg/starbutton/img/star.jpg" style="position:absolute; left:' + x + 'px; top:' + y + 'px; width:50px; height:50px" />';
-    this.pkg.handler.persist("body", html, id + '_create');
+    MsgStore.store(id + '_create', { "action" : "body", "data" : html});
+    this.pkg.handler.broadcast("body", html);
 }
 
 Starbutton.prototype.clear = function() {
     var starbutton = this;
     $(".star").each(function(idx, star) {
         var id = star.id;
-        starbutton.pkg.handler.unpersist("run", '$("#' + id + '").remove()', [id + '_create', id + '_update']);
+        MsgStore.remove(id + '_create');
+        MsgStore.remove(id + '_update');
+        starbutton.pkg.handler.broadcast("run", '$("#' + id + '").remove()');
     });
 }

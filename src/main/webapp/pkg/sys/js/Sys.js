@@ -47,6 +47,18 @@ Sys.prototype.doInit = function(from, data) {
     if (this.pkg.handler.onopen) {
         this.pkg.handler.onopen(this.handler);
     }
+
+    var panel = this.toolbox;
+    Package.listPackages(function(data) {
+        var txt = "";
+        var lst = $("#sysPackageList");
+        lst.empty();
+        for (idx in data) {
+            var p = data[idx];
+            lst.append('<li><a href="#" onclick="protocolhandler.registerPackage(\'' + p+ '\'); return false;">' + p + '</a></li>');
+        }
+        Toolbox.resizePanel(panel);
+    });
 }
 
 Sys.prototype.doPing = function(from, data) {

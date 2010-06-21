@@ -27,6 +27,8 @@
         <script type='text/javascript' src="js/jquery-ui-1.8.2.custom.min.js"></script>
         <script type='text/javascript' src="js/main.js"></script>
         <script type='text/javascript' src="js/protocol.js"></script>
+        <script type='text/javascript' src="/rws/object/Package.js"></script>
+        <script type='text/javascript' src="/rws/object/MsgStore.js"></script>
         <script type='text/javascript'>
             if (!window.WebSocket) {
                 alert('Sorry, you need a browser that supports WebSockets');
@@ -40,6 +42,7 @@
                     "onclose" : dzOnClose
                 };
                 protocolhandler = new ProtocolHandler(props);
+                protocolhandler.registerPackage("rates");
                 protocolhandler.connect(location);
             });
 

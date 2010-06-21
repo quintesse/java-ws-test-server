@@ -72,7 +72,8 @@ document.onmousemove = function(event) {
 
         // TODO make this generic! This part is only meant for the Starbutton package
         var scr = '$("#' + id + '").offset({ top: ' + objNewY + ', left: ' + objNewX + '})';
-        protocolhandler.persist("run", scr, id + '_update');
+        MsgStore.store(id + '_update', { "action" : "run", "data" : scr });
+        protocolhandler.broadcast("run", scr);
     }
 }
 

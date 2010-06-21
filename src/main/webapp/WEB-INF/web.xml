@@ -14,7 +14,7 @@
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>RwsServlet</servlet-name>
-        <url-pattern>/rws</url-pattern>
+        <url-pattern>/rws/*</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>
