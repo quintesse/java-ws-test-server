@@ -9,7 +9,7 @@ Starbutton.prototype.activate = function() {
         this.toolbox = this.pkg.loadToolbox("Starbutton", "starbutton.html", function() {
             $("#starbuttonTwinkle").click(function() { starbutton.twinkle() });
             $("#starbuttonClear").click(function() { starbutton.clear() });
-            MsgStore.getMessages(function(data) {
+            MsgStore.listMessages(function(data) {
                 for (idx in data) {
                     var info = data[idx];
                     var act = info.action;

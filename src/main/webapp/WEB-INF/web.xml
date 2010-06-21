@@ -3,6 +3,7 @@
     <servlet>
         <servlet-name>DangerZoneWebSocketServlet</servlet-name>
         <servlet-class>org.codejive.websocket.wstestserver.DangerZoneWebSocketServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet>
         <servlet-name>RwsServlet</servlet-name>

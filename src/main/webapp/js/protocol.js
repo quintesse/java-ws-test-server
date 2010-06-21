@@ -23,8 +23,7 @@ function ProtocolHandler(props) {
     this.connected = false;
     this.packages = {};
     this.clients = {};
-    this.exceptionHandler = function(ex) { alert('RWS Error: ' + ex) }
-    this.registerPackage("sys");
+    this.exceptionHandler = function(ex) {alert('RWS Error: ' + ex)}
 }
 
 // Connect to the server
@@ -43,9 +42,18 @@ ProtocolHandler.prototype.connect = function(url) {
 
 // Handle opening of the web socket
 ProtocolHandler.prototype.onOpen = function() {
-    // Tell the server we're ready
-    // (Server will then send us an INIT packet)
-    this.send('sys', 'ready', null);
+    this.nextobjid = 1;
+    this.futures = {};
+    var handler = this;
+    Client.getId(function(data) {
+        handler.id = data;
+        handler.connected = true;
+        if (handler.onopen) {
+            handler.onopen(this);
+        }
+
+        handler.registerPackage("sys");
+    });
 }
 
 // Handle each message as it comes in over the web socket
@@ -53,11 +61,15 @@ ProtocolHandler.prototype.onMessage = function(msg) {
     this.pktRecv++;
     if (msg.data) {
         var info = JSON.parse(msg.data);
-        var action = info.action;
         var data = info.data;
         var from = info.from;
-        if (console) console.log("Incoming message:", from, "-", action, "-", data);
-        this.perform(from, action, data);
+        if (console) console.log("Incoming message:", from, "-", data);
+
+        if (info.method) {
+            this.doCall(from, data);
+        } else {
+            this.doResult(from, data);
+        }
     }
 }
 
@@ -106,6 +118,39 @@ ProtocolHandler.prototype.broadcast = function(action, data) {
 // Returns a new Object ID (an ID guaranteed to be unique among all clients).
 ProtocolHandler.prototype.getNewId = function() {
     return this.id + "_" + this.nextobjid++;
+}
+
+ProtocolHandler.prototype.doCall = function(from, data) {
+    var id = data.id;
+    var obj = (data.object) ? window[data.object] : window;
+    var method = data.method;
+    var params = data.params;
+    var fn = obj[method];
+
+    var res = {
+        "id" : id
+    };
+    try {
+        res.result = fn.apply(obj, params);
+    } catch (ex) {
+        res.exception = ex;
+    }
+    this.send(from, "result", res);
+}
+
+ProtocolHandler.prototype.doResult = function(from, data) {
+    var id = data.id;
+    var fut = this.futures[id];
+    if (fut) {
+        if (data.exception && fut.failure) {
+            fut.failure(data.exception);
+        } else {
+            fut.success(data.result);
+        }
+        delete this.futures[id];
+    } else {
+        if (console) console.warn("Unknown RESULT received from", from, "with", data);
+    }
 }
 
 // Performs a remote method call on the server or another client

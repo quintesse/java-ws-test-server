@@ -16,11 +16,11 @@ public class MessageStore {
     private final Set<String> _storageIds = new CopyOnWriteArraySet<String>();
     private final Map<String, Object> _storage = new ConcurrentHashMap<String, Object>();
 
-    public Set<String> getNames() {
+    public Set<String> listNames() {
         return Collections.unmodifiableSet(_storageIds);
     }
 
-    public Collection<Object> getMessages() {
+    public Collection<Object> listMessages() {
         ArrayList result = new ArrayList(_storage.size());
         for (String id : _storageIds) {
             result.add(_storage.get(id));

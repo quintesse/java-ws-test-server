@@ -10,16 +10,10 @@ import org.eclipse.jetty.websocket.WebSocket;
  * @author tako
  */
 public class RwsContext {
-    private WebSocket websocket;
 
     private HashMap<String, Object> attributes;
 
-    public WebSocket getWebsocket() {
-        return websocket;
-    }
-
-    public RwsContext(WebSocket websocket) {
-        this.websocket = websocket;
+    public RwsContext() {
         attributes = new HashMap<String, Object>();
     }
 
@@ -33,5 +27,9 @@ public class RwsContext {
 
     public Set<String> getAttributeNames() {
         return Collections.unmodifiableSet(attributes.keySet());
+    }
+
+    public void clearAttributes() {
+        attributes.clear();
     }
 }

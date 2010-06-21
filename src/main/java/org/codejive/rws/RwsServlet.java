@@ -127,7 +127,7 @@ public class RwsServlet extends HttpServlet {
                 }
             }
         } catch (RwsException ex) {
-            throw new ServletException("Could not generate object script for " + rwsObject.getName());
+            throw new ServletException("Could not generate object script for " + rwsObject.getName(), ex);
         } finally {
             out.close();
         }

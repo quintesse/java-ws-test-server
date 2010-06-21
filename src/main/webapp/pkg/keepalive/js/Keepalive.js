@@ -44,7 +44,7 @@ Keepalive.prototype.activatePing = function(active) {
 Keepalive.prototype.sendPing = function() {
     var newRates = this.pkg.handler.pktRecv + this.pkg.handler.pktSent;
     if (newRates == this.rates) {
-        this.pkg.handler.send("sys", "ping", null);
+        Server.echo(0);
     } else {
         this.rates = newRates;
     }
