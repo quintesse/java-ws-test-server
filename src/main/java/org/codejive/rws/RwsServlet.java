@@ -111,6 +111,7 @@ public class RwsServlet extends HttpServlet {
         response.setContentType("text/javascript; charset=UTF-8");
         PrintWriter out = response.getWriter();
         try {
+            out.println("if (!rws) var rws = {};");
             out.println("if (!" + rwsObject.getName() + ") var " + rwsObject.getName() + " = {};");
 
             Set<String> methodNames = rwsObject.getMethodNames();
@@ -118,11 +119,11 @@ public class RwsServlet extends HttpServlet {
                 String params = generateParameters(rwsObject, methodName);
                 if (params.length() > 0) {
                     out.println(rwsObject.getName() + "." + methodName + " = function(" + params + ", onsuccess, onfailure) {");
-                    out.println("    protocolhandler.call('sys', '" + methodName + "', '" + rwsObject.getName() + "', onsuccess, onfailure, " + params + ")");
+                    out.println("    rws.call('sys', '" + methodName + "', '" + rwsObject.getName() + "', onsuccess, onfailure, " + params + ")");
                     out.println("}");
                 } else {
                     out.println(rwsObject.getName() + "." + methodName + " = function(onsuccess, onfailure) {");
-                    out.println("    protocolhandler.call('sys', '" + methodName + "', '" + rwsObject.getName() + "', onsuccess, onfailure)");
+                    out.println("    rws.call('sys', '" + methodName + "', '" + rwsObject.getName() + "', onsuccess, onfailure)");
                     out.println("}");
                 }
             }

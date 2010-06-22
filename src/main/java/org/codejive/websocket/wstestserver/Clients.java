@@ -47,13 +47,11 @@ public class Clients {
             fireChange(new ClientEvent(this));
         }
 
-        public void send(String from, Object data) {
+        public void send(String from, JSONObject data) {
             if (outbound.isOpen()) {
                 try {
-                    JSONObject info = new JSONObject();
-                    info.put("data", data);
-                    info.put("from", from);
-                    String jsonText = JSONValue.toJSONString(info);
+                    data.put("from", from);
+                    String jsonText = JSONValue.toJSONString(data);
                     outbound.sendMessage(jsonText);
                 } catch (IOException e) {
                     log.error("Could not send message, disconnecting socket", e);
@@ -95,14 +93,14 @@ public class Clients {
         return Collections.unmodifiableCollection(clients.values());
     }
 
-    public void sendTo(String from, String to, Object data) {
+    public void sendTo(String from, String to, JSONObject data) {
         ClientInfo client = clients.get(to);
         if (client != null) {
             client.send(from, data);
         }
     }
 
-    public void sendAll(String from, Object data, boolean meToo) {
+    public void sendAll(String from, JSONObject data, boolean meToo) {
         for (ClientInfo client : clients.values()) {
             if (meToo || !client.getId().equals(from)) {
                 client.send(from, data);

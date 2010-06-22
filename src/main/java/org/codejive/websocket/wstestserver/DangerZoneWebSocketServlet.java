@@ -104,16 +104,15 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
                 JSONObject info = (JSONObject) parser.parse(msg);
                 String to = (String) info.get("to");
                 String action = (String) info.get("action");
-                Object data = info.get("data");
                 if (to == null || "sys".equals(to)) {
                     // The message is for the server
-                    doCall(data);
+                    doCall(info);
                 } else if ("all".equals(to)) {
                     // Send the message to all connected sockets
-                    clients.sendAll(_client.getId(), data, false);
+                    clients.sendAll(_client.getId(), info, false);
                 } else {
                     // Send the message to the indicated socket
-                    clients.sendTo(_client.getId(), to, data);
+                    clients.sendTo(_client.getId(), to, info);
                 }
             } catch (ParseException ex) {
                 logger.error("Couldn't parse incoming message", ex);

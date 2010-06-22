@@ -26,7 +26,8 @@
         <script type='text/javascript' src="js/jquery-1.4.2.min.js"></script>
         <script type='text/javascript' src="js/jquery-ui-1.8.2.custom.min.js"></script>
         <script type='text/javascript' src="js/main.js"></script>
-        <script type='text/javascript' src="js/protocol.js"></script>
+        <script type='text/javascript' src="js/rws.js"></script>
+        <script type='text/javascript' src="js/packages.js"></script>
         <script type='text/javascript' src="/rws/object/Server.js"></script>
         <script type='text/javascript' src="/rws/object/Client.js"></script>
         <script type='text/javascript' src="/rws/object/Clients.js"></script>
@@ -40,13 +41,12 @@
             var protocolhandler;
             $(document).ready(function() {
                 var location = document.location.toString().replace('http://','ws://').replace('https://','wss://').replace('.html','');
-                var props = {
-                    "onopen" : dzOnOpen,
-                    "onclose" : dzOnClose
-                };
-                protocolhandler = new ProtocolHandler(props);
-                protocolhandler.registerPackage("rates");
-                protocolhandler.connect(location);
+
+                Packages.registerPackage("sys");
+                Packages.registerPackage("rates");
+                rws.onopen = dzOnOpen;
+                rws.onclose = dzOnClose;
+                rws.connect(location);
             });
 
             function dzOnOpen(zone) {
