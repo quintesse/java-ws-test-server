@@ -5,10 +5,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.codejive.rws.RwsContext;
-import org.eclipse.jetty.websocket.WebSocket.Outbound;
+import org.codejive.rws.RwsSession;
+import org.codejive.rws.RwsWebSocketAdapter;
 import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,23 +18,14 @@ import org.slf4j.LoggerFactory;
 public class Clients {
     private final Map<String, ClientInfo> clients = new ConcurrentHashMap<String, ClientInfo>();
 
-    private static long nextClientId = 1;
-
     private final Logger log = LoggerFactory.getLogger(Clients.class);
 
-    public class ClientInfo extends RwsContext {
-        private Outbound outbound;
-        private String id;
+    public class ClientInfo extends RwsSession {
         private String name;
 
-        private ClientInfo(Outbound outbound) {
-            this.outbound = outbound;
-            id = Long.toString(nextClientId++);
-            name = "Client #" + id;
-        }
-
-        public String getId() {
-            return id;
+        private ClientInfo(RwsWebSocketAdapter adapter) {
+            super(adapter);
+            name = "Client #" + getId();
         }
 
         public String getName() {
@@ -45,22 +35,6 @@ public class Clients {
         public void setName(String name) {
             this.name = name;
             fireChange(new ClientEvent(this));
-        }
-
-        public void send(String from, JSONObject data) {
-            if (outbound.isOpen()) {
-                try {
-                    data.put("from", from);
-                    String jsonText = JSONValue.toJSONString(data);
-                    outbound.sendMessage(jsonText);
-                } catch (IOException e) {
-                    log.error("Could not send message, disconnecting socket", e);
-                    removeClient(this);
-                    if (outbound.isOpen()) outbound.disconnect();
-                }
-            } else {
-                log.error("Unable to send message: socket closed");
-            }
         }
     }
 
@@ -76,8 +50,8 @@ public class Clients {
         }
     }
 
-    public ClientInfo addClient(Outbound outbound) {
-        ClientInfo client = new ClientInfo(outbound);
+    public ClientInfo addClient(RwsWebSocketAdapter adapter) {
+        ClientInfo client = new ClientInfo(adapter);
         clients.put(client.getId(), client);
         fireConnect(new ClientEvent(client));
         return client;
@@ -93,14 +67,14 @@ public class Clients {
         return Collections.unmodifiableCollection(clients.values());
     }
 
-    public void sendTo(String from, String to, JSONObject data) {
+    public void sendTo(String from, String to, JSONObject data) throws IOException {
         ClientInfo client = clients.get(to);
         if (client != null) {
             client.send(from, data);
         }
     }
 
-    public void sendAll(String from, JSONObject data, boolean meToo) {
+    public void sendAll(String from, JSONObject data, boolean meToo) throws IOException {
         for (ClientInfo client : clients.values()) {
             if (meToo || !client.getId().equals(from)) {
                 client.send(from, data);
