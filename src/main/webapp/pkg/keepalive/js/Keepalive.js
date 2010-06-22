@@ -42,7 +42,7 @@ Keepalive.prototype.activatePing = function(active) {
 }
 
 Keepalive.prototype.sendPing = function() {
-    var newRates = this.pkg.handler.pktRecv + this.pkg.handler.pktSent;
+    var newRates = rws.pktRecv + rws.pktSent;
     if (newRates == this.rates) {
         Server.echo(0);
     } else {

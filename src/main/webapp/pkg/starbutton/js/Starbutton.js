@@ -39,10 +39,10 @@ Starbutton.prototype.isActive = function() {
 Starbutton.prototype.twinkle = function() {
     var x = Math.floor(Math.random() * 500);
     var y = Math.floor(Math.random() * 500);
-    var id = "star_" + this.pkg.handler.getNewId();
+    var id = "star_" + rws.getNewId();
     var html = '<img id="' + id + '" class="star draggable" src="/pkg/starbutton/img/star.jpg" style="position:absolute; left:' + x + 'px; top:' + y + 'px; width:50px; height:50px" />';
     MsgStore.store(id + '_create', { "action" : "body", "data" : html});
-    this.pkg.handler.broadcast("body", html);
+    rws.broadcast("body", html);
 }
 
 Starbutton.prototype.clear = function() {

@@ -108,7 +108,7 @@ rws.call = function() {
         }
         var id = this.getNewId();
         info["id"] = id;
-        this.futures[id] = {
+        this._futures[id] = {
             "success" : onSuccess,
             "failure" : onFailure
         };
@@ -123,11 +123,11 @@ rws.call = function() {
 // ****************************************************************
 
 rws._connected = false;
+rws._futures = {};
 
 // Handle opening of the web socket
 rws._onOpen = function() {
     this.nextobjid = 1;
-    this.futures = {};
     var handler = this;
     Client.getId(function(data) {
         handler.id = data;
@@ -197,10 +197,10 @@ rws._handleCall = function(data) {
 
 rws._handleResult = function(data) {
     var id = data.id;
-    var fut = this.futures[id];
+    var fut = this._futures[id];
     if (fut && fut.success) {
         fut.success(data.result);
-        delete this.futures[id];
+        delete this._futures[id];
     } else {
         if (console) console.warn("Unknown RESULT received from", data.from, "with", data);
     }
@@ -208,16 +208,16 @@ rws._handleResult = function(data) {
 
 rws._handleException = function(data) {
     var id = data.id;
-    var fut = this.futures[id];
+    var fut = this._futures[id];
     if (fut && fut.failure) {
         fut.failure(data.exception);
-        delete this.futures[id];
+        delete this._futures[id];
     } else {
         if (console) console.warn("Unknown EXCEPTION received from", data.from, "with", data);
     }
 };
 
-rws._copy() = function(value) {
+rws._copy = function(value) {
     var newvalue = {};
     for (prop in value) {
         if (this[prop] && typeof this[prop] == "object") {

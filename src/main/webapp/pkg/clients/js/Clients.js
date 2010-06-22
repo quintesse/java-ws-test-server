@@ -8,9 +8,9 @@ Clients.prototype.activate = function() {
     if (!this.toolbox) {
         var clients = this;
         var fn = function() {clients.showClients()};
-        this.pkg.handler.onclientconnect = fn;
-        this.pkg.handler.onclientdisconnect = fn;
-        this.pkg.handler.onclientchange = fn;
+        rws.onclientconnect = fn;
+        rws.onclientdisconnect = fn;
+        rws.onclientchange = fn;
         this.toolbox = this.pkg.loadToolbox("Clients", "clients.html", function() {
             $("#toolboxClientButton").click(function() {
                 var name = $("#toolboxClientName").val();
@@ -34,10 +34,10 @@ Clients.prototype.deactivate = function() {
 Clients.prototype.showClients = function() {
     if (this.toolbox) {
         var txt;
-        if (this.pkg.handler.isConnected()) {
+        if (rws.isConnected()) {
             txt = "";
-            for (id in this.pkg.handler.clients) {
-                var client = this.pkg.handler.clients[id];
+            for (id in rws.clients) {
+                var client = rws.clients[id];
                 txt = txt + "<li>" + client.name + "</li>";
             }
         } else {
@@ -49,7 +49,7 @@ Clients.prototype.showClients = function() {
 }
 
 Clients.prototype.setName = function(name) {
-    var me = __copy(this.pkg.handler.clients[this.pkg.handler.id]);
+    var me = __copy(rws.clients[rws.id]);
     me.name = name;
-    this.pkg.handler.send("sys", "client", me);
+    rws.send("sys", "client", me);
 }

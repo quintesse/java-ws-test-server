@@ -28,9 +28,9 @@ Rates.prototype.deactivate = function() {
 
 Rates.prototype.showRates = function() {
     if (this.toolbox) {
-        if (this.pkg.handler.isConnected()) {
-            var pin = this.pkg.handler.pktRecv;
-            var pout = this.pkg.handler.pktSent;
+        if (rws.isConnected()) {
+            var pin = rws.pktRecv;
+            var pout = rws.pktSent;
             var din = Math.ceil((pin - this.oldPktRecv) / this.period);
             var dout = Math.ceil((pout - this.oldPktSent) / this.period);
             this.oldPktRecv = pin;

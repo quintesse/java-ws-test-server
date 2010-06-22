@@ -84,6 +84,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         public void onConnect(Outbound outbound) {
             logger.info(this + " onConnect - creating JettyWebSocketAdapter");
             adapter = new JettyWebSocketAdapter(outbound);
+            adapter.onConnect();
         }
 
         @Override

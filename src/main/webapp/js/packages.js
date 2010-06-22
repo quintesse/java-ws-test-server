@@ -20,7 +20,7 @@ var Packages = {
             var pkgs = this;
             var clsName = __upperFirst(pkgName);
             ContentEditor.addScriptSrc(this.packageUrl(pkgName) + "js/" + clsName + ".js", function() {
-                var pkg = new Package(pkgs, pkgName);
+                var pkg = new Package(pkgName);
                 var fn = window[clsName];
                 var obj = new fn(pkg);
                 pkgs.packages[pkgName] = obj;

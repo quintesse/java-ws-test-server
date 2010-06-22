@@ -25,16 +25,18 @@ Sys.prototype.activate = function() {
                 }
             });
 
-            Package.listPackages(function(data) {
-                var txt = "";
-                var lst = $("#sysPackageList");
-                lst.empty();
-                for (idx in data) {
-                    var p = data[idx];
-                    lst.append('<li><a href="#" onclick="protocolhandler.registerPackage(\'' + p+ '\'); return false;">' + p + '</a></li>');
-                }
-                Toolbox.resizePanel(syspkg.toolbox);
-            });
+            setTimeout(function() {
+                Package.listPackages(function(data) {
+                    var lst = $("#sysPackageList");
+                    lst.empty();
+                    for (idx in data) {
+                        var p = data[idx];
+                        lst.append('<li><a href="#" onclick="protocolhandler.registerPackage(\'' + p+ '\'); return false;">' + p + '</a></li>');
+                    }
+                    Toolbox.resizePanel(syspkg.toolbox);
+                });
+            }, 200);
+            
         });
     }
 }

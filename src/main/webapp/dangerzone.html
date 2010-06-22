@@ -59,7 +59,7 @@
             }
 
             function tryRmi() {
-                protocolhandler.call("sys", "listPackages", "Package", function(data) {
+                rws.call("sys", "listPackages", "Package", function(data) {
                     alert("Ok " + data);
                 }, function(ex) {
                     alert("Err " + ex);
