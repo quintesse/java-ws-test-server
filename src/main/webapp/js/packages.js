@@ -18,11 +18,9 @@ var Packages = {
     "registerPackage" : function(pkgName) {
         if (!this.packages[pkgName]) {
             var pkgs = this;
-            var clsName = __upperFirst(pkgName);
-            ContentEditor.addScriptSrc(this.packageUrl(pkgName) + "js/" + clsName + ".js", function() {
-                var pkg = new Package(pkgName);
-                var fn = window[clsName];
-                var obj = new fn(pkg);
+            ContentEditor.addScriptSrc(this.packageUrl(pkgName) + "js/" + pkgName + ".js", function() {
+                var obj = window[pkgName + 'Pkg'];
+                pkgs._extend(obj, pkgName);
                 pkgs.packages[pkgName] = obj;
                 pkgs.activatePackage(obj);
             });
@@ -80,6 +78,69 @@ var Packages = {
             action = action.substr(p + 1);
         }
         this.packages[pkgName].perform(from, action, data);
+    },
+
+    "_extend" : function(pkg, pkgName) {
+        pkg.packageName = pkgName;
+
+        pkg["isActive"] = function() {
+            if (this.toolbox) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        pkg["loadHtml"] = function(name, target, callback) {
+            $.get(Packages.packageUrl(this.packageName) + "html/" + name, function(bodyData) {
+                if (target) {
+                    target.html(bodyData);
+                } else {
+                    ContentEditor.addBody(bodyData);
+                }
+                if (callback) {
+                    callback.apply();
+                }
+            });
+        }
+
+        pkg["loadScript"] = function(name, callback) {
+            ContentEditor.addScriptSrc(Packages.packageUrl(this.packageName) + "js/" + name, callback);
+        }
+
+        pkg["loadCss"] = function(name) {
+            ContentEditor.addCssLink(Packages.packageUrl(this.packageName) + "css/" + name);
+        }
+
+        pkg["loadToolbox"] = function(title, name, callback) {
+            var panel = Toolbox.addPanel(title, "...");
+            $.get(Packages.packageUrl(this.packageName) + "html/" + name, function(bodyData) {
+                Toolbox.setPanelContent(panel, bodyData);
+                if (callback) {
+                    callback.apply();
+                }
+            });
+            return panel;
+        }
+
+        // Send a message over the web socket to the equivalent package on the other side
+        //   to - the recipient of the message. Use 'sys' for packets directed
+        //        to the server and 'all' to broadcast to all connected clients
+        //        (except for one where the packet originated).
+        //   data - the data necessary to complete the action.
+        pkg["send"] = function(to, data) {
+            data.pkg = this.packageName;
+            rws.send(to, data);
+        }
+
+        // Send a message over the web socket to the equivalent package for all
+        // connected clients (except for one where the packet originated).
+        // And performs the indicated action locally as well.
+        //   data - the data necessary to complete the action (can be null).
+        pkg["broadcast"] = function(data) {
+            data.pkg = this.packageName;
+            rws.broadcast(data);
+        }
     }
 }
 
@@ -92,53 +153,4 @@ function Package(packageName) {
     this.packageName = packageName;
 }
 
-Package.prototype.loadHtml = function(name, target, callback) {
-    $.get(Packages.packageUrl(this.packageName) + "html/" + name, function(bodyData) {
-        if (target) {
-            target.html(bodyData);
-        } else {
-            ContentEditor.addBody(bodyData);
-        }
-        if (callback) {
-            callback.apply();
-        }
-    });
-}
 
-Package.prototype.loadScript = function(name, callback) {
-    ContentEditor.addScriptSrc(Packages.packageUrl(this.packageName) + "js/" + name, callback);
-}
-
-Package.prototype.loadCss = function(name) {
-    ContentEditor.addCssLink(Packages.packageUrl(this.packageName) + "css/" + name);
-}
-
-Package.prototype.loadToolbox = function(title, name, callback) {
-    var panel = Toolbox.addPanel(title, "...");
-    $.get(Packages.packageUrl(this.packageName) + "html/" + name, function(bodyData) {
-        Toolbox.setPanelContent(panel, bodyData);
-        if (callback) {
-            callback.apply();
-        }
-    });
-    return panel;
-}
-
-// Send a message over the web socket to the equivalent package on the other side
-//   to - the recipient of the message. Use 'sys' for packets directed
-//        to the server and 'all' to broadcast to all connected clients
-//        (except for one where the packet originated).
-//   data - the data necessary to complete the action.
-Package.prototype.send = function(to, data) {
-    data.pkg = this.packageName;
-    rws.send(to, data);
-}
-
-// Send a message over the web socket to the equivalent package for all
-// connected clients (except for one where the packet originated).
-// And performs the indicated action locally as well.
-//   data - the data necessary to complete the action (can be null).
-Package.prototype.broadcast = function(data) {
-    data.pkg = this.packageName;
-    rws.broadcast(data);
-}

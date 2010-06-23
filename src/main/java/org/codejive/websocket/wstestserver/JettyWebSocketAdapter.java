@@ -12,6 +12,7 @@ import org.codejive.rws.RwsRegistry;
 import org.codejive.rws.RwsWebSocketAdapter;
 import org.codejive.websocket.wstestserver.Clients.ClientInfo;
 import org.eclipse.jetty.websocket.WebSocket.Outbound;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -102,11 +103,11 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
 
         Object[] args = null;
         // Convert parameter map to array
-        if (params != null && params instanceof JSONObject) {
-            JSONObject p = (JSONObject) params;
+        if (params != null && params instanceof JSONArray) {
+            JSONArray p = (JSONArray) params;
             args = new Object[p.size()];
             for (int i = 0; i < p.size(); i++) {
-                args[i] = p.get(Integer.toString(i));
+                args[i] = p.get(i);
             }
         }
 

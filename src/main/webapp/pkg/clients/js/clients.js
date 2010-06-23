@@ -1,28 +1,26 @@
 
-function Clients(pkg) {
-    this.pkg = pkg;
-    this.period = 5;
-}
+if (!clientsPkg) var clientsPkg = {};
 
-Clients.prototype.activate = function() {
+clientsPkg["period"] = 5;
+
+clientsPkg["activate"] = function() {
     if (!this.toolbox) {
-        var clients = this;
-        var fn = function() {clients.showClients()};
+        var fn = function() {clientsPkg.showClients()};
         rws.onclientconnect = fn;
         rws.onclientdisconnect = fn;
         rws.onclientchange = fn;
-        this.toolbox = this.pkg.loadToolbox("Clients", "clients.html", function() {
+        this.toolbox = this.loadToolbox("Clients", "clients.html", function() {
             $("#toolboxClientButton").click(function() {
                 var name = $("#toolboxClientName").val();
-                clients.setName(name);
+                clientsPkg.setName(name);
             });
-            clients.showClients();
-            clients.interval = setInterval(fn, clients.period * 1000);
+            clientsPkg.showClients();
+            clientsPkg.interval = setInterval(fn, clientsPkg.period * 1000);
         });
     }
 }
 
-Clients.prototype.deactivate = function() {
+clientsPkg["deactivate"] = function() {
     if (this.toolbox) {
         clearInterval(this.interval);
         this.showClients();
@@ -31,7 +29,7 @@ Clients.prototype.deactivate = function() {
     }
 }
 
-Clients.prototype.showClients = function() {
+clientsPkg["showClients"] = function() {
     if (this.toolbox) {
         var txt;
         if (rws.isConnected()) {
@@ -48,7 +46,7 @@ Clients.prototype.showClients = function() {
     }
 }
 
-Clients.prototype.setName = function(name) {
+clientsPkg["setName"] = function(name) {
     var me = __copy(rws.clients[rws.id]);
     me.name = name;
     rws.send("sys", "client", me);

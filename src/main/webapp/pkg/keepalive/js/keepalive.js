@@ -1,25 +1,23 @@
 
-function Keepalive(pkg) {
-    this.pkg = pkg;
-    this.period = 5;
-    this.rates = pkg.handler.pktRecv + pkg.handler.pktSent;
-}
+if (!keepalivePkg) var keepalivePkg = {};
 
-Keepalive.prototype.activate = function() {
+keepalivePkg["period"] = 5;
+keepalivePkg["rates"] = rws.pktRecv + rws.pktSent;
+
+keepalivePkg["activate"] = function() {
     if (!this.toolbox) {
-        var keepalive = this;
-        this.toolbox = this.pkg.loadToolbox("Keepalive", "keepalive.html", function() {
+        this.toolbox = this.loadToolbox("Keepalive", "keepalive.html", function() {
             $("#keepaliveCheck").click(function() {
                 var checked = $("#keepaliveCheck")[0].checked;
-                keepalive.activatePing(checked);
+                keepalivePkg.activatePing(checked);
             });
             var checked = $("#keepaliveCheck")[0].checked;
-            keepalive.activatePing(checked);
+            keepalivePkg.activatePing(checked);
         });
     }
 }
 
-Keepalive.prototype.deactivate = function() {
+keepalivePkg["deactivate"] = function() {
     if (this.toolbox) {
         this.activatePing(false);
         Toolbox.removePanel(this.toolbox);
@@ -27,7 +25,7 @@ Keepalive.prototype.deactivate = function() {
     }
 }
 
-Keepalive.prototype.activatePing = function(active) {
+keepalivePkg["activatePing"] = function(active) {
     if (active) {
         if (!this.keepaliveInterval) {
             var keepalive = this;
@@ -41,7 +39,7 @@ Keepalive.prototype.activatePing = function(active) {
     }
 }
 
-Keepalive.prototype.sendPing = function() {
+keepalivePkg["sendPing"] = function() {
     var newRates = rws.pktRecv + rws.pktSent;
     if (newRates == this.rates) {
         Server.echo(0);

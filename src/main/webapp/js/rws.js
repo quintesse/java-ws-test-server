@@ -65,13 +65,11 @@ rws.send = function(to, data) {
 };
 
 // Send a message over the web socket to all connected clients
-// (except for one where the packet originated). And performs the
-// indicated action locally as well.
+// (except for one where the packet originated).
 //   data - the data necessary to complete the action
 rws.broadcast = function(data) {
-    data.id = null; // Make sure we don't try to ask for results
+    if (data.id) data.id = null; // Make sure we don't try to ask for results
     this.send('all', data);
-    this._handleCall(this.id, action, data);
 };
 
 // Returns a new Object ID (an ID guaranteed to be unique among all clients).
@@ -85,6 +83,7 @@ rws.getNewId = function() {
 //   objName - the name of the remote object (can be undefined for global context)
 //   onSuccess - the function to call with the result (can be undefined)
 //   onFailure - the function to call when a remote error occurred (can be undefined)
+//   params... - the parameters to pass can come after
 rws.call = function() {
     var to = Array.prototype.shift.call(arguments);
     var method = Array.prototype.shift.call(arguments);
@@ -96,7 +95,7 @@ rws.call = function() {
         "method" : method
     }
     if (arguments.length > 0) {
-        info["params"] = arguments;
+        info["params"] = Array.prototype.slice.call(arguments);
     }
     if (objName) {
         info["object"] = objName;
@@ -117,6 +116,36 @@ rws.call = function() {
     this.send(to, info);
 };
 
+// Performs a remote method call on all clients (except for one where the packet
+// originated). And performs the indicated action locally as well.
+//   method - the name of the method to call
+//   objName - the name of the remote object (can be undefined for global context)
+//   params... - the parameters to pass can come after
+rws.broadcall = function() {
+    var method = Array.prototype.shift.call(arguments);
+    var objName = Array.prototype.shift.call(arguments);
+
+    var info = {
+        "method" : method
+    }
+    if (arguments.length > 0) {
+        info["params"] = Array.prototype.slice.call(arguments);
+    }
+    if (objName) {
+        info["object"] = objName;
+    }
+
+    this.broadcast(info);
+    this.perform(info);
+};
+
+rws.perform = function(data) {
+    var obj = (data.object) ? window[data.object] : window;
+    var method = data.method;
+    var params = data.params;
+    var fn = obj[method];
+    return fn.apply(obj, params);
+}
 
 // ****************************************************************
 // PRIVATE METHODS BELOW - DO NOT USE
@@ -167,7 +196,7 @@ rws._handleMessage = function(data) {
         if (msg.method) {
             if (console) console.log("Incoming call:", msg.from, "-", msg.object + '.' + msg.method, "(", msg.params, ")");
             this._handleCall(msg);
-        } if (msg.result) {
+        } else if (msg.result) {
             if (console) console.log("Incoming result:", msg.from, "-", msg.id, "-", msg.result);
             this._handleResult(msg);
         } else {
@@ -192,7 +221,9 @@ rws._handleCall = function(data) {
     } catch (ex) {
         res.exception = ex;
     }
-    this.send(data.from, res);
+    if (id) {
+        this.send(data.from, res);
+    }
 };
 
 rws._handleResult = function(data) {

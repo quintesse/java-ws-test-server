@@ -1,23 +1,21 @@
 
-function Rates(pkg) {
-    this.pkg = pkg;
-    this.period = 2;
-    this.oldPktRecv = 0;
-    this.oldPktSent = 0;
-}
+if (!ratesPkg) var ratesPkg = {};
 
-Rates.prototype.activate = function() {
+ratesPkg["period"] = 2;
+ratesPkg["oldPktRecv"] = 0;
+ratesPkg["oldPktSent"] = 0;
+
+ratesPkg["activate"] = function() {
     if (!this.toolbox) {
-        var rates = this;
-        this.pkg.loadCss("rates.css");
-        this.toolbox = this.pkg.loadToolbox("Rates", "rates.html", function() {
-            rates.showRates();
-            rates.interval = setInterval(function() {rates.showRates()}, rates.period * 1000);
+        this.loadCss("rates.css");
+        this.toolbox = this.loadToolbox("Rates", "rates.html", function() {
+            ratesPkg.showRates();
+            ratesPkg.interval = setInterval(function() {ratesPkg.showRates()}, ratesPkg.period * 1000);
         });
     }
 }
 
-Rates.prototype.deactivate = function() {
+ratesPkg["deactivate"] = function() {
     if (this.toolbox) {
         clearInterval(this.interval);
         this.showRates();
@@ -26,7 +24,7 @@ Rates.prototype.deactivate = function() {
     }
 }
 
-Rates.prototype.showRates = function() {
+ratesPkg["showRates"] = function() {
     if (this.toolbox) {
         if (rws.isConnected()) {
             var pin = rws.pktRecv;

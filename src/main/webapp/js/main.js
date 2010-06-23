@@ -71,9 +71,8 @@ document.onmousemove = function(event) {
         var id = draggedObj[0].id;
 
         // TODO make this generic! This part is only meant for the Starbutton package
-        var scr = '$("#' + id + '").offset({ top: ' + objNewY + ', left: ' + objNewX + '})';
-        MsgStore.store(id + '_update', { "action" : "run", "data" : scr });
-        protocolhandler.broadcast("run", scr);
+        rws.broadcall("star", "starbuttonPkg", id, objNewX, objNewY);
+        MsgStore.store(id, { "method" : "star", "object" : "starbuttonPkg", "params" : [id, objNewX, objNewY] });
     }
 }
 
