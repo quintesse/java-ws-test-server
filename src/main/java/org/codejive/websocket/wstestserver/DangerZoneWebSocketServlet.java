@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.codejive.rws.RwsObject;
 import org.codejive.rws.RwsObject.Scope;
 import org.codejive.rws.RwsRegistry;
+import org.codejive.rws.converters.RwsBeanConverter;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 import org.slf4j.Logger;
@@ -58,6 +59,9 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         RwsObject pkg = new RwsObject("Package", Package.class, Scope.global, new String[] { "listPackages" });
         pkg.setTargetObject(null, new Package(config));
         RwsRegistry.register(pkg);
+
+        String[] cltProps = { "id", "name" };
+        RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
     }
 
     @Override

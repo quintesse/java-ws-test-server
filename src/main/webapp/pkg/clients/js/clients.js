@@ -31,23 +31,26 @@ clientsPkg["deactivate"] = function() {
 
 clientsPkg["showClients"] = function() {
     if (this.toolbox) {
-        var txt;
         if (rws.isConnected()) {
-            txt = "";
-            for (id in rws.clients) {
-                var client = rws.clients[id];
-                txt = txt + "<li>" + client.name + "</li>";
-            }
+            Clients.listClients(function(lst) {
+                var txt = "";
+                var newClients = {};
+                for (id in lst) {
+                    var client = lst[id];
+                    newClients[client.id] = client;
+                    txt = txt + "<li>" + client.name + "</li>";
+                }
+                clientsPkg.clients = newClients;
+                $("#toolboxClientList").html(txt);
+                Toolbox.resizePanel(clientsPkg.toolbox);
+            });
         } else {
-            txt = 'Disconnected';
+            $("#toolboxClientList").html('Disconnected');
+            Toolbox.resizePanel(this.toolbox);
         }
-        $("#toolboxClientList").html(txt);
-        Toolbox.resizePanel(this.toolbox);
     }
 }
 
 clientsPkg["setName"] = function(name) {
-    var me = __copy(rws.clients[rws.id]);
-    me.name = name;
-    rws.send("sys", "client", me);
+    Client.setName(name);
 }

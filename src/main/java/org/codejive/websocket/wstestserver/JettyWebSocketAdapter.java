@@ -13,6 +13,7 @@ import org.codejive.rws.RwsWebSocketAdapter;
 import org.codejive.websocket.wstestserver.Clients.ClientInfo;
 import org.eclipse.jetty.websocket.WebSocket.Outbound;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -64,11 +65,7 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
         } catch (ParseException ex) {
             log.error("Couldn't parse incoming message", ex);
         } catch (IOException ex) {
-            log.error("Could not send message, disconnecting socket", ex);
-            clients.removeClient(client);
-            if (isConnected()) {
-                disconnect();
-            }
+            log.error("Could not send message", ex);
         }
     }
 
@@ -94,8 +91,7 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
         outbound.sendMessage(msg);
     }
 
-    private void doCall(Object data) throws IOException {
-        JSONObject info = (JSONObject) data;
+    private void doCall(JSONObject info) throws IOException {
         String id = (String) info.get("id"); // If null the caller is not interested in the result!
         String obj = (String) info.get("object");
         String method = (String) info.get("method");

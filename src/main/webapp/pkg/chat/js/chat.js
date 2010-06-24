@@ -29,15 +29,14 @@ chatPkg["deactivate"] = function() {
 
 chatPkg["sendMessage"] = function(txt) {
     if (txt.length > 0) {
-        this.broadcast("message", txt);
+        rws.broadcall("message", "chatPkg", rws.id, txt);
     }
 }
 
-chatPkg["doMessage"] = function(from, data) {
+chatPkg["message"] = function(from, data) {
     var name = from;
-    var client = rws.clients[from];
-    if (client) {
-        name = client.name;
+    if (typeof clientsPkg != "undefined" && clientsPkg.clients) {
+        name = clientsPkg.clients[from].name;
     }
     var lst = $("#chatTextarea");
     $("<b>" + name + "</b> : " + data + "<br>").appendTo(lst);

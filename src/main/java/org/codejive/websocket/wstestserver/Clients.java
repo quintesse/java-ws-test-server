@@ -70,15 +70,32 @@ public class Clients {
     public void sendTo(String from, String to, JSONObject data) throws IOException {
         ClientInfo client = clients.get(to);
         if (client != null) {
-            client.send(from, data);
+            send(client, from, data);
         }
     }
 
-    public void sendAll(String from, JSONObject data, boolean meToo) throws IOException {
+    public void sendAll(String from, JSONObject data, boolean meToo) {
         for (ClientInfo client : clients.values()) {
             if (meToo || !client.getId().equals(from)) {
-                client.send(from, data);
+                try {
+                    send(client, from, data);
+                } catch (IOException ex) {
+                    // Ignore
+                }
             }
+        }
+    }
+
+    private void send(ClientInfo client, String from, JSONObject data) throws IOException {
+        try {
+            client.send(from, data);
+        } catch (IOException ex) {
+            log.error("Could not send message, disconnecting socket", ex);
+            removeClient(client);
+            if (client.isConnected()) {
+                client.disconnect();
+            }
+            throw ex;
         }
     }
 
