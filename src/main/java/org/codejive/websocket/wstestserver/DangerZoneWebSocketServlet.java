@@ -10,6 +10,7 @@ import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.codejive.rws.RwsHandler;
 
 import org.codejive.rws.RwsObject;
 import org.codejive.rws.RwsObject.Scope;
@@ -62,6 +63,8 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
         String[] cltProps = { "id", "name" };
         RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
+
+        RwsRegistry.register(new RwsBeanConverter(), RwsHandler.class.getName());
     }
 
     @Override

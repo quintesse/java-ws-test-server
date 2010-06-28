@@ -8,6 +8,7 @@ package org.codejive.websocket.wstestserver;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import org.codejive.rws.RwsException;
+import org.codejive.rws.RwsHandler;
 import org.codejive.rws.RwsRegistry;
 import org.codejive.rws.RwsWebSocketAdapter;
 import org.codejive.websocket.wstestserver.Clients.ClientInfo;
@@ -117,10 +118,10 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
             if (id != null) {
                 client.send("sys", newCallException(id, ex));
             }
-        } catch (RwsException ex) {
-            log.error("Rws Call failed", ex);
+        } catch (Throwable th) {
+            log.error("Rws Call failed", th);
             if (id != null) {
-                client.send("sys", newCallException(id, ex));
+                client.send("sys", newCallException(id, th));
             }
         }
     }

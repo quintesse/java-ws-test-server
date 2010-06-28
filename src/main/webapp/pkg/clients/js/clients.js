@@ -6,9 +6,9 @@ clientsPkg["period"] = 5;
 clientsPkg["activate"] = function() {
     if (!this.toolbox) {
         var fn = function() {clientsPkg.showClients()};
-        rws.onclientconnect = fn;
-        rws.onclientdisconnect = fn;
-        rws.onclientchange = fn;
+        Clients.subscribeConnect(function(ev) { alert(ev) });
+        Clients.subscribeDisconnect(function(ev) { alert(ev) });
+        Clients.subscribeChange(function(ev) { alert(ev) });
         this.toolbox = this.loadToolbox("Clients", "clients.html", function() {
             $("#toolboxClientButton").click(function() {
                 var name = $("#toolboxClientName").val();

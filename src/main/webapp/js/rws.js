@@ -64,9 +64,9 @@ rws.send = function(to, data) {
     }
 };
 
-// Send a message over the web socket to all connected clients
+// Send a message over the web socket to all connected clients.
 // (except for one where the packet originated).
-//   data - the data necessary to complete the action
+//   data - the data necessary to complete the action.
 rws.broadcast = function(data) {
     if (data.id) data.id = null; // Make sure we don't try to ask for results
     this.send('all', data);
@@ -77,13 +77,14 @@ rws.getNewId = function() {
     return this.id + "_" + this.nextobjid++;
 };
 
-// Performs a remote method call on the server or another client
-//   to - the id of the remote site ("sys" for server)
-//   method - the name of the method to call
-//   objName - the name of the remote object (can be undefined for global context)
-//   onSuccess - the function to call with the result (can be undefined)
-//   onFailure - the function to call when a remote error occurred (can be undefined)
-//   params... - the parameters to pass can come after
+// Performs a remote method call on the server or another client.
+//   to - the id of the remote site ("sys" for server).
+//   method - the name of the method to call.
+//   objName - the name of the remote object (can be undefined for global context).
+//   onSuccess - the function to call with the result (can be undefined).
+//   onFailure - the function to call when a remote error occurred (can be undefined).
+//   params... - the parameters to pass can come after.
+// Returns the Id of a future if it was created
 rws.call = function() {
     var to = Array.prototype.shift.call(arguments);
     var method = Array.prototype.shift.call(arguments);
@@ -101,11 +102,12 @@ rws.call = function() {
         info["object"] = objName;
     }
 
+    var id;
     if (onSuccess || onFailure) {
         if (!onFailure) {
             onFailure = this.exceptionHandler;
         }
-        var id = this.getNewId();
+        id = this.getNewId();
         info["id"] = id;
         this._futures[id] = {
             "success" : onSuccess,
@@ -114,6 +116,8 @@ rws.call = function() {
     }
 
     this.send(to, info);
+
+    return id;
 };
 
 // Performs a remote method call on all clients (except for one where the packet
@@ -145,7 +149,51 @@ rws.perform = function(data) {
     var params = data.params;
     var fn = obj[method];
     return fn.apply(obj, params);
-}
+};
+
+// Subscribes to a remote event source
+//   to - the id of the remote site ("sys" for server)
+//   event - the name of the event to subscribe to
+//   objName - the name of the remote object (can be undefined for global context)
+//   handler - the function to call with the result (can be undefined)
+// Returns the Id of the handler
+rws.subscribe = function(to, event, objName, handler) {
+
+    var handlerid = this.getNewId();
+    var handlerInfo = {
+        "clientId" : this.id,
+        "handlerId" : handlerid
+    }
+
+    this._futures[handlerid] = {
+        "to" : to,
+        "event" : event,
+        "object" : objName,
+        "success" : handler,
+        "failure" : this.exceptionHandler
+    };
+
+    this.call(to, "subscribe" + __upperFirst(event), objName, undefined, function() {
+        delete this._futures[handlerid];
+    }, handlerInfo);
+
+    return handlerid;
+};
+
+// Unsubscribes from a remote event source
+//   handlerid - the id of the handler that was returned when subscribing
+rws.unsubscribe = function(handlerid) {
+    var fut = this._futures[handlerid];
+    if (fut) {
+        var handlerInfo = {
+            "clientId" : this.id,
+            "handlerId" : handlerid
+        }
+        this.call(to, "unsubscribe" + __upperFirst(fut.event), fut.object, function() {
+            delete this._futures[handlerid];
+        }, undefined, handlerInfo);
+    }
+};
 
 // ****************************************************************
 // PRIVATE METHODS BELOW - DO NOT USE

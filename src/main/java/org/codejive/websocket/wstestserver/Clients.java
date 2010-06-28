@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+import org.codejive.rws.RwsHandler;
 import org.codejive.rws.RwsSession;
 import org.codejive.rws.RwsWebSocketAdapter;
 import org.json.simple.JSONObject;
@@ -17,6 +20,9 @@ import org.slf4j.LoggerFactory;
  */
 public class Clients {
     private final Map<String, ClientInfo> clients = new ConcurrentHashMap<String, ClientInfo>();
+    private final Set<RwsHandler> connectHandlers = new CopyOnWriteArraySet<RwsHandler>();
+    private final Set<RwsHandler> disconnectHandlers = new CopyOnWriteArraySet<RwsHandler>();
+    private final Set<RwsHandler> changeHandlers = new CopyOnWriteArraySet<RwsHandler>();
 
     private final Logger log = LoggerFactory.getLogger(Clients.class);
 
@@ -102,29 +108,35 @@ public class Clients {
     private void fireConnect(ClientEvent event) {
     }
 
-    public void subscribeConnect() {
+    public void subscribeConnect(RwsHandler handler) {
+        connectHandlers.add(handler);
     }
 
-    public void unsubscribeConnect() {
+    public void unsubscribeConnect(RwsHandler handler) {
+        connectHandlers.remove(handler);
     }
 
     private void fireDisconnect(ClientEvent event) {
 
     }
 
-    public void subscribeDisconnect() {
+    public void subscribeDisconnect(RwsHandler handler) {
+        disconnectHandlers.add(handler);
     }
 
-    public void unsubscribeDisconnect() {
+    public void unsubscribeDisconnect(RwsHandler handler) {
+        disconnectHandlers.remove(handler);
     }
 
     private void fireChange(ClientEvent event) {
 
     }
 
-    public void subscribeChange() {
+    public void subscribeChange(RwsHandler handler) {
+        changeHandlers.add(handler);
     }
 
-    public void unsubscribeChange() {
+    public void unsubscribeChange(RwsHandler handler) {
+        changeHandlers.remove(handler);
     }
 }
