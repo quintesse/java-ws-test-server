@@ -6,7 +6,7 @@ starbuttonPkg["activate"] = function() {
         this.toolbox = this.loadToolbox("Starbutton", "starbutton.html", function() {
             $("#starbuttonTwinkle").click(function() {starbuttonPkg.twinkle()});
             $("#starbuttonClear").click(function() {starbuttonPkg.clear()});
-            MsgStore.listMessages(function(data) {
+            DataStore.listData('starbutton', function(data) {
                 for (idx in data) {
                     var info = data[idx];
                     rws.perform(info);
@@ -28,7 +28,7 @@ starbuttonPkg["twinkle"] = function() {
     var x = Math.floor(Math.random() * 500);
     var y = Math.floor(Math.random() * 500);
     rws.broadcall("star", "starbuttonPkg", id, x, y);
-    MsgStore.store(id, { "method" : "star", "object" : "starbuttonPkg", "params" : [id, x, y] });
+    DataStore.store('starbutton', id, { "method" : "star", "object" : "starbuttonPkg", "params" : [id, x, y] });
 }
 
 starbuttonPkg["star"] = function(id, x, y) {
@@ -51,6 +51,6 @@ starbuttonPkg["clear"] = function() {
     $(".star").each(function(idx, star) {
         var id = star.id;
         rws.broadcall("remove", "starbuttonPkg", id);
-        MsgStore.remove(id);
+        DataStore.remove('starbutton', id);
     });
 }

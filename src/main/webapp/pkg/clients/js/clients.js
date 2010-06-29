@@ -1,7 +1,7 @@
 
 if (!clientsPkg) var clientsPkg = {};
 
-clientsPkg["period"] = 25;
+clientsPkg["period"] = 10;
 
 clientsPkg["activate"] = function() {
     if (!this.toolbox) {

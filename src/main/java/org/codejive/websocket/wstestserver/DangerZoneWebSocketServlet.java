@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
-    private final MessageStore _msgStore = new MessageStore();
+    private final DataStore dataStore = new DataStore();
     
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
 
@@ -35,7 +35,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
         RwsObject srv = new RwsObject("Server", DangerZoneWebSocketServlet.class, Scope.global, new String[] {
             "echo"
-        });
+        }, true);
         srv.setTargetObject(null, this);
         RwsRegistry.register(srv);
 
@@ -43,21 +43,17 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             "listClients", "subscribeConnect", "unsubscribeConnect",
             "subscribeDisconnect", "unsubscribeDisconnect",
             "subscribeChange", "unsubscribeChange"
-        });
+        }, true);
         RwsRegistry.register(clts);
         
-        RwsObject clt = new RwsObject("Client", Clients.ClientInfo.class, Scope.connection, new String[] {
-            "getId", "getName", "setName"
-        });
+        RwsObject clt = new RwsObject("Client", Clients.ClientInfo.class, Scope.connection);
         RwsRegistry.register(clt);
 
-        RwsObject store = new RwsObject("MsgStore", MessageStore.class, Scope.global, new String[] {
-            "listNames", "listMessages", "get", "store", "remove", "clear"
-        });
-        store.setTargetObject(null, _msgStore);
+        RwsObject store = new RwsObject("DataStore", DataStore.class, Scope.global);
+        store.setTargetObject(null, dataStore);
         RwsRegistry.register(store);
 
-        RwsObject pkg = new RwsObject("Package", Package.class, Scope.global, new String[] { "listPackages" });
+        RwsObject pkg = new RwsObject("Package", Package.class, Scope.global);
         pkg.setTargetObject(null, new Package(config));
         RwsRegistry.register(pkg);
 

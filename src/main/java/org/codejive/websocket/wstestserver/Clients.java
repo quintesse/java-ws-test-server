@@ -153,7 +153,7 @@ public class Clients {
                         JSONObject obj = new JSONObject();
                         obj.put("id", h.getHandlerId());
                         obj.put("event", eventObj);
-                        client.send("sys", obj);
+                        send(client, "sys", obj);
                     } catch (IOException ex) {
                         log.error("Could not send event, removing handler", ex);
                         handlers.remove(h);
