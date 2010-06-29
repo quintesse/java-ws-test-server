@@ -1,14 +1,14 @@
 
 if (!clientsPkg) var clientsPkg = {};
 
-clientsPkg["period"] = 5;
+clientsPkg["period"] = 25;
 
 clientsPkg["activate"] = function() {
     if (!this.toolbox) {
         var fn = function() {clientsPkg.showClients()};
-        Clients.subscribeConnect(function(ev) { alert(ev) });
-        Clients.subscribeDisconnect(function(ev) { alert(ev) });
-        Clients.subscribeChange(function(ev) { alert(ev) });
+        Clients.subscribeConnect(function(ev) { clientsPkg.showClients() });
+        Clients.subscribeDisconnect(function(ev) { clientsPkg.showClients() });
+        Clients.subscribeChange(function(ev) { clientsPkg.showClients() });
         this.toolbox = this.loadToolbox("Clients", "clients.html", function() {
             $("#toolboxClientButton").click(function() {
                 var name = $("#toolboxClientName").val();

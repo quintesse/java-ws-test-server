@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import org.codejive.rws.RwsException;
 import org.codejive.rws.RwsHandler;
+import org.codejive.rws.RwsRegistry;
 import org.codejive.rws.RwsSession;
 import org.codejive.rws.RwsWebSocketAdapter;
 import org.json.simple.JSONObject;
@@ -106,6 +108,7 @@ public class Clients {
     }
 
     private void fireConnect(ClientEvent event) {
+        fireEvent(connectHandlers, event);
     }
 
     public void subscribeConnect(RwsHandler handler) {
@@ -117,7 +120,7 @@ public class Clients {
     }
 
     private void fireDisconnect(ClientEvent event) {
-
+        fireEvent(disconnectHandlers, event);
     }
 
     public void subscribeDisconnect(RwsHandler handler) {
@@ -129,7 +132,7 @@ public class Clients {
     }
 
     private void fireChange(ClientEvent event) {
-
+        fireEvent(changeHandlers, event);
     }
 
     public void subscribeChange(RwsHandler handler) {
@@ -138,5 +141,29 @@ public class Clients {
 
     public void unsubscribeChange(RwsHandler handler) {
         changeHandlers.remove(handler);
+    }
+
+    private void fireEvent(Set<RwsHandler> handlers, ClientEvent event) {
+        try {
+            Object eventObj = RwsRegistry.convertToJSON(event);
+            for (RwsHandler h : handlers) {
+                ClientInfo client = clients.get(h.getClientId());
+                if (client != null) {
+                    try {
+                        JSONObject obj = new JSONObject();
+                        obj.put("id", h.getHandlerId());
+                        obj.put("event", eventObj);
+                        client.send("sys", obj);
+                    } catch (IOException ex) {
+                        log.error("Could not send event, removing handler", ex);
+                        handlers.remove(h);
+                    }
+                } else {
+                    handlers.remove(h);
+                }
+            }
+        } catch (RwsException ex) {
+            log.error("Could not create event object", ex);
+        }
     }
 }

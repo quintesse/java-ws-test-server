@@ -241,15 +241,20 @@ rws._handleMessage = function(data) {
     }
     for (idx in info) {
         var msg = info[idx];
-        if (msg.method) {
+        if (typeof msg.method != "undefined") {
             if (console) console.log("Incoming call:", msg.from, "-", msg.object + '.' + msg.method, "(", msg.params, ")");
             this._handleCall(msg);
-        } else if (msg.result) {
+        } else if (typeof msg.result != "undefined") {
             if (console) console.log("Incoming result:", msg.from, "-", msg.id, "-", msg.result);
             this._handleResult(msg);
-        } else {
+        } else if (typeof msg.exception != "undefined") {
             if (console) console.log("Incoming exception:", msg.from, "-", msg.id, "-", msg.exception);
             this._handleException(msg);
+        } else if (typeof msg.event != "undefined") {
+            if (console) console.log("Incoming event:", msg.from, "-", msg.id, "-", msg.event);
+            this._handleEvent(msg);
+        } else {
+            if (console) console.log("Received unknown message:", msg);
         }
     }
 };
@@ -277,8 +282,10 @@ rws._handleCall = function(data) {
 rws._handleResult = function(data) {
     var id = data.id;
     var fut = this._futures[id];
-    if (fut && fut.success) {
-        fut.success(data.result);
+    if (fut) {
+        if (fut.success) {
+            fut.success(data.result);
+        }
         delete this._futures[id];
     } else {
         if (console) console.warn("Unknown RESULT received from", data.from, "with", data);
@@ -288,11 +295,25 @@ rws._handleResult = function(data) {
 rws._handleException = function(data) {
     var id = data.id;
     var fut = this._futures[id];
-    if (fut && fut.failure) {
-        fut.failure(data.exception);
+    if (fut) {
+        if (fut.failure) {
+            fut.failure(data.exception);
+        }
         delete this._futures[id];
     } else {
         if (console) console.warn("Unknown EXCEPTION received from", data.from, "with", data);
+    }
+};
+
+rws._handleEvent = function(data) {
+    var id = data.id;
+    var fut = this._futures[id];
+    if (fut) {
+        if (fut.success) {
+            fut.success(data.event);
+        }
+    } else {
+        if (console) console.warn("Unknown EVENT received from", data.from, "with", data);
     }
 };
 

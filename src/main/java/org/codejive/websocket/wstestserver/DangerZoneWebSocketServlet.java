@@ -64,6 +64,8 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         String[] cltProps = { "id", "name" };
         RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
 
+        RwsRegistry.register(new RwsBeanConverter(), Clients.ClientEvent.class.getName());
+
         RwsRegistry.register(new RwsBeanConverter(), RwsHandler.class.getName());
     }
 
