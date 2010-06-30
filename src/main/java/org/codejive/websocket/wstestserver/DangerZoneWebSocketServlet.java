@@ -10,7 +10,7 @@ import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.codejive.rws.RwsHandler;
+import org.codejive.rws.RwsException;
 
 import org.codejive.rws.RwsObject;
 import org.codejive.rws.RwsObject.Scope;
@@ -30,39 +30,31 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
+        try {
+            // TODO Make this configurable!
+            RwsObject srv = new RwsObject("Server", DangerZoneWebSocketServlet.class, Scope.global, new String[]{"echo"}, true);
+            srv.setTargetObject(null, this);
+            RwsRegistry.register(srv);
 
-        // TODO Make this configurable!
+            RwsObject clts = new RwsObject("Clients", Clients.class, Scope.global, new String[]{"listClients", "subscribeConnect", "unsubscribeConnect", "subscribeDisconnect", "unsubscribeDisconnect", "subscribeChange", "unsubscribeChange"}, true);
+            RwsRegistry.register(clts);
 
-        RwsObject srv = new RwsObject("Server", DangerZoneWebSocketServlet.class, Scope.global, new String[] {
-            "echo"
-        }, true);
-        srv.setTargetObject(null, this);
-        RwsRegistry.register(srv);
+            RwsObject clt = new RwsObject("Client", Clients.ClientInfo.class, Scope.connection);
+            RwsRegistry.register(clt);
 
-        RwsObject clts = new RwsObject("Clients", Clients.class, Scope.global, new String[] {
-            "listClients", "subscribeConnect", "unsubscribeConnect",
-            "subscribeDisconnect", "unsubscribeDisconnect",
-            "subscribeChange", "unsubscribeChange"
-        }, true);
-        RwsRegistry.register(clts);
-        
-        RwsObject clt = new RwsObject("Client", Clients.ClientInfo.class, Scope.connection);
-        RwsRegistry.register(clt);
+            RwsObject store = new RwsObject("DataStore", DataStore.class, Scope.global);
+            store.setTargetObject(null, dataStore);
+            RwsRegistry.register(store);
 
-        RwsObject store = new RwsObject("DataStore", DataStore.class, Scope.global);
-        store.setTargetObject(null, dataStore);
-        RwsRegistry.register(store);
-
-        RwsObject pkg = new RwsObject("Package", Package.class, Scope.global);
-        pkg.setTargetObject(null, new Package(config));
-        RwsRegistry.register(pkg);
-
-        String[] cltProps = { "id", "name" };
-        RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
-
-        RwsRegistry.register(new RwsBeanConverter(), Clients.ClientEvent.class.getName());
-
-        RwsRegistry.register(new RwsBeanConverter(), RwsHandler.class.getName());
+            RwsObject pkg = new RwsObject("Package", Package.class, Scope.global);
+            pkg.setTargetObject(null, new Package(config));
+            RwsRegistry.register(pkg);
+            
+            String[] cltProps = {"id", "name"};
+            RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
+        } catch (RwsException ex) {
+            throw new ServletException("Could not initialize RwsRegistry", ex);
+        }
     }
 
     @Override

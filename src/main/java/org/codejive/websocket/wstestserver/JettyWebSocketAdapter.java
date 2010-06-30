@@ -7,14 +7,11 @@ package org.codejive.websocket.wstestserver;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import org.codejive.rws.RwsException;
-import org.codejive.rws.RwsHandler;
 import org.codejive.rws.RwsRegistry;
 import org.codejive.rws.RwsWebSocketAdapter;
 import org.codejive.websocket.wstestserver.Clients.ClientInfo;
 import org.eclipse.jetty.websocket.WebSocket.Outbound;
 import org.json.simple.JSONArray;
-import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;

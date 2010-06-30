@@ -3,13 +3,11 @@ package org.codejive.websocket.wstestserver;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EventObject;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
-import org.codejive.rws.RwsException;
-import org.codejive.rws.RwsHandler;
-import org.codejive.rws.RwsRegistry;
 import org.codejive.rws.RwsSession;
 import org.codejive.rws.RwsWebSocketAdapter;
 import org.json.simple.JSONObject;
@@ -22,9 +20,7 @@ import org.slf4j.LoggerFactory;
  */
 public class Clients {
     private final Map<String, ClientInfo> clients = new ConcurrentHashMap<String, ClientInfo>();
-    private final Set<RwsHandler> connectHandlers = new CopyOnWriteArraySet<RwsHandler>();
-    private final Set<RwsHandler> disconnectHandlers = new CopyOnWriteArraySet<RwsHandler>();
-    private final Set<RwsHandler> changeHandlers = new CopyOnWriteArraySet<RwsHandler>();
+    private final Set<ClientListener> listeners = new CopyOnWriteArraySet<ClientListener>();
 
     private final Logger log = LoggerFactory.getLogger(Clients.class);
 
@@ -42,33 +38,40 @@ public class Clients {
 
         public void setName(String name) {
             this.name = name;
-            fireChange(new ClientEvent(this));
+            fireChange(this);
         }
     }
 
-    public class ClientEvent {
+    public class ClientEvent extends EventObject {
         private ClientInfo client;
 
-        private ClientEvent(ClientInfo client) {
+        public ClientEvent(ClientInfo client) {
+            super(null);
             this.client = client;
         }
-        
+
         public ClientInfo getClient() {
             return client;
         }
     }
 
+    public interface ClientListener extends java.util.EventListener {
+        void connect(ClientEvent event);
+        void disconnect(ClientEvent event);
+        void change(ClientEvent event);
+    }
+
     public ClientInfo addClient(RwsWebSocketAdapter adapter) {
         ClientInfo client = new ClientInfo(adapter);
         clients.put(client.getId(), client);
-        fireConnect(new ClientEvent(client));
+        fireConnect(client);
         return client;
     }
     
     public void removeClient(ClientInfo client) {
         clients.remove(client.getId());
         client.clearAttributes();
-        fireDisconnect(new ClientEvent(client));
+        fireDisconnect(client);
     }
 
     public Collection<ClientInfo> listClients() {
@@ -107,63 +110,68 @@ public class Clients {
         }
     }
 
-    private void fireConnect(ClientEvent event) {
-        fireEvent(connectHandlers, event);
+    public void addClientListener(ClientListener listener) {
+        listeners.add(listener);
     }
 
-    public void subscribeConnect(RwsHandler handler) {
-        connectHandlers.add(handler);
+    public void removeClientListener(ClientListener listener) {
+        listeners.remove(listener);
     }
 
-    public void unsubscribeConnect(RwsHandler handler) {
-        connectHandlers.remove(handler);
-    }
-
-    private void fireDisconnect(ClientEvent event) {
-        fireEvent(disconnectHandlers, event);
-    }
-
-    public void subscribeDisconnect(RwsHandler handler) {
-        disconnectHandlers.add(handler);
-    }
-
-    public void unsubscribeDisconnect(RwsHandler handler) {
-        disconnectHandlers.remove(handler);
-    }
-
-    private void fireChange(ClientEvent event) {
-        fireEvent(changeHandlers, event);
-    }
-
-    public void subscribeChange(RwsHandler handler) {
-        changeHandlers.add(handler);
-    }
-
-    public void unsubscribeChange(RwsHandler handler) {
-        changeHandlers.remove(handler);
-    }
-
-    private void fireEvent(Set<RwsHandler> handlers, ClientEvent event) {
-        try {
-            Object eventObj = RwsRegistry.convertToJSON(event);
-            for (RwsHandler h : handlers) {
-                ClientInfo client = clients.get(h.getClientId());
-                if (client != null) {
-                    try {
-                        JSONObject obj = new JSONObject();
-                        obj.put("id", h.getHandlerId());
-                        obj.put("event", eventObj);
-                        send(client, "sys", obj);
-                    } catch (IOException ex) {
-                        log.error("Could not send event, removing handler", ex);
-                        handlers.remove(h);
-                    }
-                } else {
-                    handlers.remove(h);
-                }
+    private void fireConnect(ClientInfo client) {
+        ClientEvent event = new ClientEvent(client);
+        for (ClientListener l : listeners) {
+            try {
+                l.connect(event);
+            } catch (Throwable th) {
+                log.warn("Could not fire event on a listener");
             }
-        } catch (RwsException ex) {
-            log.error("Could not create event object", ex);
         }
     }
+
+    private void fireDisconnect(ClientInfo client) {
+        ClientEvent event = new ClientEvent(client);
+        for (ClientListener l : listeners) {
+            try {
+                l.disconnect(event);
+            } catch (Throwable th) {
+                log.warn("Could not fire event on a listener");
+            }
+        }
+    }
+
+    private void fireChange(ClientInfo client) {
+        ClientEvent event = new ClientEvent(client);
+        for (ClientListener l : listeners) {
+            try {
+                l.change(event);
+            } catch (Throwable th) {
+                log.warn("Could not fire event on a listener");
+            }
+        }
+    }
+
+//    private void fireEvent(Set<RwsHandler> handlers, ClientEvent event) {
+//        try {
+//            Object eventObj = RwsRegistry.convertToJSON(event);
+//            for (RwsHandler h : handlers) {
+//                ClientInfo client = clients.get(h.getClientId());
+//                if (client != null) {
+//                    try {
+//                        JSONObject obj = new JSONObject();
+//                        obj.put("id", h.getHandlerId());
+//                        obj.put("event", eventObj);
+//                        send(client, "sys", obj);
+//                    } catch (IOException ex) {
+//                        log.error("Could not send event, removing handler", ex);
+//                        handlers.remove(h);
+//                    }
+//                } else {
+//                    handlers.remove(h);
+//                }
+//            }
+//        } catch (RwsException ex) {
+//            log.error("Could not create event object", ex);
+//        }
+//    }
 }

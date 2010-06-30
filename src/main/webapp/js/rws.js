@@ -153,11 +153,12 @@ rws.perform = function(data) {
 
 // Subscribes to a remote event source
 //   to - the id of the remote site ("sys" for server)
-//   event - the name of the event to subscribe to
+//   action - the name of the event action to subscribe to
+//   event - the name of the event set to subscribe to
 //   objName - the name of the remote object (can be undefined for global context)
 //   handler - the function to call with the result (can be undefined)
 // Returns the Id of the handler
-rws.subscribe = function(to, event, objName, handler) {
+rws.subscribe = function(to, action, event, objName, handler) {
 
     var handlerid = this.getNewId();
     var handlerInfo = {
@@ -167,6 +168,7 @@ rws.subscribe = function(to, event, objName, handler) {
 
     this._futures[handlerid] = {
         "to" : to,
+        "action" : action,
         "event" : event,
         "object" : objName,
         "success" : handler,
