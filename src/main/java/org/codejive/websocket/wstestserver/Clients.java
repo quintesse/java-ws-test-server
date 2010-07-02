@@ -44,15 +44,8 @@ public class Clients {
     }
 
     public class ClientEvent extends EventObject {
-        private ClientInfo client;
-
         public ClientEvent(ClientInfo client) {
             super(client);
-            this.client = client;
-        }
-
-        public ClientInfo getClient() {
-            return client;
         }
     }
 

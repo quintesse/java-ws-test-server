@@ -53,6 +53,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             
             String[] cltProps = {"id", "name"};
             RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
+            RwsRegistry.register(new RwsBeanConverter(), Clients.ClientEvent.class.getName());
             RwsRegistry.register(new RwsBeanConverter(), RwsSession.Subscription.class.getName());
         } catch (RwsException ex) {
             throw new ServletException("Could not initialize RwsRegistry", ex);
