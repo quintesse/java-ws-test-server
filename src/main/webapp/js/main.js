@@ -72,7 +72,7 @@ document.onmousemove = function(event) {
 
         // TODO make this generic! This part is only meant for the Starbutton package
         rws.broadcall("star", "starbuttonPkg", id, objNewX, objNewY);
-        MsgStore.store(id, { "method" : "star", "object" : "starbuttonPkg", "params" : [id, objNewX, objNewY] });
+        DataStore.store("starbutton", id, { "method" : "star", "object" : "starbuttonPkg", "params" : [id, objNewX, objNewY] });
     }
 }
 

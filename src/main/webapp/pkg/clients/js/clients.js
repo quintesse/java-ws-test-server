@@ -1,7 +1,7 @@
 
 if (!clientsPkg) var clientsPkg = {};
 
-clientsPkg["period"] = 10;
+//clientsPkg["period"] = 10;
 
 clientsPkg["activate"] = function() {
     if (!this.toolbox) {
@@ -15,8 +15,10 @@ clientsPkg["activate"] = function() {
                 clientsPkg.setName(name);
             });
             clientsPkg.showClients();
-            clientsPkg.interval = setInterval(fn, clientsPkg.period * 1000);
+            //clientsPkg.interval = setInterval(fn, clientsPkg.period * 1000);
         });
+    } else {
+        clientsPkg.showClients();
     }
 }
 
