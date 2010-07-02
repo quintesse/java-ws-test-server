@@ -15,6 +15,7 @@ import org.codejive.rws.RwsException;
 import org.codejive.rws.RwsObject;
 import org.codejive.rws.RwsObject.Scope;
 import org.codejive.rws.RwsRegistry;
+import org.codejive.rws.RwsSession;
 import org.codejive.rws.converters.RwsBeanConverter;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
@@ -52,6 +53,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
             
             String[] cltProps = {"id", "name"};
             RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
+            RwsRegistry.register(new RwsBeanConverter(), RwsSession.Subscription.class.getName());
         } catch (RwsException ex) {
             throw new ServletException("Could not initialize RwsRegistry", ex);
         }

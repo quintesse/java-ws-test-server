@@ -3,6 +3,7 @@ package org.codejive.websocket.wstestserver;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EventListener;
 import java.util.EventObject;
 import java.util.Map;
 import java.util.Set;
@@ -46,7 +47,7 @@ public class Clients {
         private ClientInfo client;
 
         public ClientEvent(ClientInfo client) {
-            super(null);
+            super(client);
             this.client = client;
         }
 
@@ -55,7 +56,7 @@ public class Clients {
         }
     }
 
-    public interface ClientListener extends java.util.EventListener {
+    public interface ClientListener extends EventListener {
         void connect(ClientEvent event);
         void disconnect(ClientEvent event);
         void change(ClientEvent event);
@@ -150,28 +151,4 @@ public class Clients {
             }
         }
     }
-
-//    private void fireEvent(Set<RwsHandler> handlers, ClientEvent event) {
-//        try {
-//            Object eventObj = RwsRegistry.convertToJSON(event);
-//            for (RwsHandler h : handlers) {
-//                ClientInfo client = clients.get(h.getClientId());
-//                if (client != null) {
-//                    try {
-//                        JSONObject obj = new JSONObject();
-//                        obj.put("id", h.getHandlerId());
-//                        obj.put("event", eventObj);
-//                        send(client, "sys", obj);
-//                    } catch (IOException ex) {
-//                        log.error("Could not send event, removing handler", ex);
-//                        handlers.remove(h);
-//                    }
-//                } else {
-//                    handlers.remove(h);
-//                }
-//            }
-//        } catch (RwsException ex) {
-//            log.error("Could not create event object", ex);
-//        }
-//    }
 }

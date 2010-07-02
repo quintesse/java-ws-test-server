@@ -70,8 +70,7 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
     @Override
     public void onDisconnect() {
         log.info(this + " onDisconnect");
-        clients.removeClient(client);
-        client = null;
+        client.disconnect();
     }
 
     @Override
@@ -81,6 +80,7 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
 
     @Override
     public void disconnect() {
+        clients.removeClient(client);
         outbound.disconnect();
     }
 

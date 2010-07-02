@@ -156,44 +156,39 @@ rws.perform = function(data) {
 //   action - the name of the event action to subscribe to
 //   event - the name of the event set to subscribe to
 //   objName - the name of the remote object (can be undefined for global context)
-//   handler - the function to call with the result (can be undefined)
+//   handler - the function to call for each incoming event
 // Returns the Id of the handler
 rws.subscribe = function(to, action, event, objName, handler) {
 
-    var handlerid = this.getNewId();
-    var handlerInfo = {
-        "clientId" : this.id,
-        "handlerId" : handlerid
-    }
+    var sub = new Subscription();
+    sub.clientId = this.id;
+    sub.handlerId = this.getNewId();
+    sub.action = action;
+    sub.event = event;
+    sub.object = objName;
 
-    this._futures[handlerid] = {
+    this._futures[sub.handlerId] = {
         "to" : to,
-        "action" : action,
-        "event" : event,
-        "object" : objName,
-        "success" : handler,
-        "failure" : this.exceptionHandler
+        "info" : sub,
+        "handler" : handler
     };
 
-    this.call(to, "subscribe" + __upperFirst(event), objName, undefined, function() {
-        delete this._futures[handlerid];
-    }, handlerInfo);
+    Client.subscribe(sub, undefined, function(data) {
+        delete rws._futures[sub.handlerId];
+        rws.exceptionHandler(data);
+    });
 
-    return handlerid;
+    return sub.handlerId;
 };
 
 // Unsubscribes from a remote event source
 //   handlerid - the id of the handler that was returned when subscribing
-rws.unsubscribe = function(handlerid) {
-    var fut = this._futures[handlerid];
+rws.unsubscribe = function(handlerId) {
+    var fut = this._futures[handlerId];
     if (fut) {
-        var handlerInfo = {
-            "clientId" : this.id,
-            "handlerId" : handlerid
-        }
-        this.call(to, "unsubscribe" + __upperFirst(fut.event), fut.object, function() {
-            delete this._futures[handlerid];
-        }, undefined, handlerInfo);
+        Client.unsubscribe(fut.info, function() {
+            delete rws._futures[handlerId];
+        }, undefined);
     }
 };
 
@@ -311,8 +306,8 @@ rws._handleEvent = function(data) {
     var id = data.id;
     var fut = this._futures[id];
     if (fut) {
-        if (fut.success) {
-            fut.success(data.event);
+        if (fut.handler) {
+            fut.handler(data.event);
         }
     } else {
         if (console) console.warn("Unknown EVENT received from", data.from, "with", data);
