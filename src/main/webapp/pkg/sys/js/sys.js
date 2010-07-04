@@ -14,9 +14,9 @@ sysPkg["activate"] = function() {
                     var txt = box.val();
                     if (txt.substr(0, 1) == "-") {
                         txt = txt.substr(1);
-                        sysPkg.pkg.handler.deactivatePackage(txt);
+                        Packages.deactivatePackage(txt);
                     } else {
-                        sysPkg.pkg.handler.registerPackage(txt);
+                        Packages.registerPackage(txt);
                     }
                     box.val("");
                 }
