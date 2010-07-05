@@ -10,10 +10,10 @@ import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.codejive.rws.RwsContext;
 import org.codejive.rws.RwsException;
 
 import org.codejive.rws.RwsObject;
-import org.codejive.rws.RwsObject.Scope;
 import org.codejive.rws.RwsRegistry;
 import org.codejive.rws.RwsSession;
 import org.codejive.rws.converters.RwsBeanConverter;
@@ -33,28 +33,32 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         super.init(config);
         try {
             // TODO Make this configurable!
-            RwsObject srv = new RwsObject("Server", DangerZoneWebSocketServlet.class, Scope.global, new String[]{"echo"}, true);
-            srv.setTargetObject(null, this);
+            RwsObject srv = new RwsObject(DangerZoneWebSocketServlet.class, "Server", new RwsBeanConverter());
+            // METHODS new String[]{"echo"}, true
+            // INSTANCE srv.setTargetObject(null, this); // Scope.global,
             RwsRegistry.register(srv);
 
-            RwsObject clts = new RwsObject("Clients", Clients.class, Scope.global, new String[]{"listClients", "subscribeConnect", "unsubscribeConnect", "subscribeDisconnect", "unsubscribeDisconnect", "subscribeChange", "unsubscribeChange"}, true);
-            RwsRegistry.register(clts);
+            RwsObject ctx = new RwsObject(RwsContext.class, "Context", new RwsBeanConverter());
+            // METHODS new String[]{"listClients", "subscribeConnect", "unsubscribeConnect", "subscribeDisconnect", "unsubscribeDisconnect", "subscribeChange", "unsubscribeChange"}, true
+            // INSTANCE Scope.global
+            RwsRegistry.register(ctx);
 
-            RwsObject clt = new RwsObject("Client", Clients.ClientInfo.class, Scope.connection);
+            RwsObject clt = new RwsObject(RwsSession.class, "Session", new RwsBeanConverter());
+            // INSTANCE Scope.connection
             RwsRegistry.register(clt);
 
-            RwsObject store = new RwsObject("DataStore", DataStore.class, Scope.global);
-            store.setTargetObject(null, dataStore);
+            RwsObject store = new RwsObject(DataStore.class, "DataStore", new RwsBeanConverter());
+            // INSTANCE store.setTargetObject(null, dataStore); // Scope.global,
             RwsRegistry.register(store);
 
-            RwsObject pkg = new RwsObject("Package", Package.class, Scope.global);
-            pkg.setTargetObject(null, new Package(config));
+            RwsObject pkg = new RwsObject(Package.class, "Package", new RwsBeanConverter());
+            // INSTANCE pkg.setTargetObject(null, new Package(config)); // , Scope.global
             RwsRegistry.register(pkg);
             
-            String[] cltProps = {"id", "name"};
-            RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
-            RwsRegistry.register(new RwsBeanConverter(), Clients.ClientEvent.class.getName());
-            RwsRegistry.register(new RwsBeanConverter(), RwsSession.Subscription.class.getName());
+//            String[] cltProps = {"id", "name"};
+//            RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
+//            RwsRegistry.register(new RwsBeanConverter(), Clients.ClientEvent.class.getName());
+//            RwsRegistry.register(new RwsBeanConverter(), RwsSession.Subscription.class.getName());
         } catch (RwsException ex) {
             throw new ServletException("Could not initialize RwsRegistry", ex);
         }

@@ -7,9 +7,10 @@ package org.codejive.websocket.wstestserver;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import org.codejive.rws.RwsContext;
 import org.codejive.rws.RwsRegistry;
+import org.codejive.rws.RwsSession;
 import org.codejive.rws.RwsWebSocketAdapter;
-import org.codejive.websocket.wstestserver.Clients.ClientInfo;
 import org.eclipse.jetty.websocket.WebSocket.Outbound;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -24,9 +25,9 @@ import org.slf4j.LoggerFactory;
  */
 public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
     private Outbound outbound;
-    private ClientInfo client;
+    private RwsSession session;
 
-    private static final Clients clients = new Clients();
+    private static final RwsContext context = new RwsContext();
 
     private static final Logger log = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
 
@@ -36,9 +37,10 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
 
     @Override
     public void onConnect() {
-        client = clients.addClient(this);
-        RwsRegistry.getObject("Client").setTargetObject(client, client);
-        RwsRegistry.getObject("Clients").setTargetObject(null, clients);
+        session = context.addSession(this);
+// TODO Still have to convert this!
+//        RwsRegistry.getObject("Client").setTargetObject(session, session);
+//        RwsRegistry.getObject("Clients").setTargetObject(context, context);
 
     }
 
@@ -55,10 +57,10 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
                 doCall(info);
             } else if ("all".equals(to)) {
                 // Send the message to all connected sockets
-                clients.sendAll(client.getId(), info, false);
+                context.sendAll(session.getId(), info, false);
             } else {
                 // Send the message to the indicated socket
-                clients.sendTo(client.getId(), to, info);
+                context.sendTo(session.getId(), to, info);
             }
         } catch (ParseException ex) {
             log.error("Couldn't parse incoming message", ex);
@@ -70,7 +72,7 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
     @Override
     public void onDisconnect() {
         log.info(this + " onDisconnect");
-        client.disconnect();
+        session.disconnect();
     }
 
     @Override
@@ -80,7 +82,7 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
 
     @Override
     public void disconnect() {
-        clients.removeClient(client);
+        context.removeSession(session);
         outbound.disconnect();
     }
 
@@ -106,19 +108,19 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
         }
 
         try {
-            Object result = RwsRegistry.call(client, obj, method, args);
+            Object result = RwsRegistry.call(session, obj, method, args);
             if (id != null) {
-                client.send("sys", newCallResult(id, result));
+                session.send("sys", newCallResult(id, result));
             }
         } catch (InvocationTargetException ex) {
             log.error("Remote object returned an error", ex);
             if (id != null) {
-                client.send("sys", newCallException(id, ex));
+                session.send("sys", newCallException(id, ex));
             }
         } catch (Throwable th) {
             log.error("Rws Call failed", th);
             if (id != null) {
-                client.send("sys", newCallException(id, th));
+                session.send("sys", newCallException(id, th));
             }
         }
     }
