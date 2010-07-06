@@ -48,7 +48,10 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
             RwsObject clt = new RwsObject(RwsSession.class, "Session", conv);
             // INSTANCE Scope.connection
-            context.getRegistry().register(clt);
+            // HACK we register with null for now because we don't have a RwsSession object yet
+            // but the client might already be asking for the Session script. The moment we
+            // create the session we update this with the proper value.
+            context.getRegistry().register(clt, context, "session", null);
 
             RwsObject store = new RwsObject(DataStore.class, "DataStore", conv);
             // INSTANCE store.setTargetObject(null, dataStore); // Scope.global,
@@ -61,7 +64,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
 //            String[] cltProps = {"id", "name"};
 //            context.getRegistry().register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
 //            context.getRegistry().register(new RwsBeanConverter(), Clients.ClientEvent.class.getName());
-//            context.getRegistry().register(new RwsBeanConverter(), RwsSession.Subscription.class.getName());
+            context.getRegistry().register(new RwsObject(RwsSession.Subscription.class, "Subscription", conv));
 
             RwsContextWebFactory.getInstance(config.getServletContext()).setContext(context);
         } catch (RwsException ex) {

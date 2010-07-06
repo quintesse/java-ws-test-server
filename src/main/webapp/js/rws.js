@@ -318,7 +318,7 @@ rws._copy = function(value) {
     var newvalue = {};
     for (prop in value) {
         if (this[prop] && typeof this[prop] == "object") {
-            newvalue[prop] = __copy(value[prop]);
+            newvalue[prop] = this._copy(value[prop]);
         } else {
             newvalue[prop] = value[prop];
         }

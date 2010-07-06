@@ -42,7 +42,7 @@ keepalivePkg["activatePing"] = function(active) {
 keepalivePkg["sendPing"] = function() {
     var newRates = rws.pktRecv + rws.pktSent;
     if (newRates == this.rates) {
-        Server.echo(0);
+        server.echo(0);
     } else {
         this.rates = newRates;
     }

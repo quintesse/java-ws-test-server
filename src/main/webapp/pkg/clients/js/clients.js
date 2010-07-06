@@ -6,9 +6,9 @@ if (!clientsPkg) var clientsPkg = {};
 clientsPkg["activate"] = function() {
     if (!this.toolbox) {
         var fn = function() {clientsPkg.showClients()};
-        context.subscribeClientConnect(fn);
-        context.subscribeClientDisconnect(fn);
-        context.subscribeClientChange(fn);
+        context.subscribeSessionConnect(fn);
+        context.subscribeSessionDisconnect(fn);
+        context.subscribeSessionChange(fn);
         this.toolbox = this.loadToolbox("Clients", "clients.html", function() {
             $("#toolboxClientButton").click(function() {
                 var name = $("#toolboxClientName").val();
@@ -34,7 +34,7 @@ clientsPkg["deactivate"] = function() {
 clientsPkg["showClients"] = function() {
     if (this.toolbox) {
         if (rws.isConnected()) {
-            context.listClients(function(lst) {
+            context.listSessions(function(lst) {
                 var txt = "";
                 var newClients = {};
                 for (id in lst) {
