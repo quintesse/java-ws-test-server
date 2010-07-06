@@ -2,12 +2,12 @@ package org.codejive.websocket.wstestserver;
 
 import javax.servlet.ServletConfig;
 
-public class Package {
+public class PackageInfo {
 
     private ServletConfig config;
     private static final String[] packages = new String[]{"chat", "clients", "keepalive", "rates", "starbutton", "sys"};
 
-    public Package(ServletConfig config) {
+    public PackageInfo(ServletConfig config) {
         this.config = config;
     }
 

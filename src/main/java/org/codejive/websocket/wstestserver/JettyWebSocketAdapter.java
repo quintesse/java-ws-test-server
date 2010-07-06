@@ -8,6 +8,7 @@ package org.codejive.websocket.wstestserver;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import org.codejive.rws.RwsContext;
+import org.codejive.rws.RwsObject;
 import org.codejive.rws.RwsRegistry;
 import org.codejive.rws.RwsSession;
 import org.codejive.rws.RwsWebSocketAdapter;
@@ -24,24 +25,22 @@ import org.slf4j.LoggerFactory;
  * @author tako
  */
 public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
+    private RwsContext context;
     private Outbound outbound;
     private RwsSession session;
 
-    private static final RwsContext context = new RwsContext();
-
     private static final Logger log = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
 
-    public JettyWebSocketAdapter(Outbound outbound) {
+    public JettyWebSocketAdapter(RwsContext context, Outbound outbound) {
+        this.context = context;
         this.outbound = outbound;
     }
 
     @Override
     public void onConnect() {
         session = context.addSession(this);
-// TODO Still have to convert this!
-//        RwsRegistry.getObject("Client").setTargetObject(session, session);
-//        RwsRegistry.getObject("Clients").setTargetObject(context, context);
-
+        RwsObject obj = context.getRegistry().getObject("Session");
+        context.getRegistry().register(obj, session, "session", session);
     }
 
     @Override
@@ -51,7 +50,6 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
             JSONParser parser = new JSONParser();
             JSONObject info = (JSONObject) parser.parse(msg);
             String to = (String) info.get("to");
-            String action = (String) info.get("action");
             if (to == null || "sys".equals(to)) {
                 // The message is for the server
                 doCall(info);
@@ -108,7 +106,7 @@ public class JettyWebSocketAdapter implements RwsWebSocketAdapter {
         }
 
         try {
-            Object result = RwsRegistry.call(session, obj, method, args);
+            Object result = context.getRegistry().call(session, obj, method, args);
             if (id != null) {
                 session.send("sys", newCallResult(id, result));
             }

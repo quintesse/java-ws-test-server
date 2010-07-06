@@ -173,7 +173,7 @@ rws.subscribe = function(to, action, event, objName, handler) {
         "handler" : handler
     };
 
-    Session.subscribe(sub, undefined, function(data) {
+    session.subscribe(sub, undefined, function(data) {
         delete rws._futures[sub.handlerId];
         rws.exceptionHandler(data);
     });
@@ -186,7 +186,7 @@ rws.subscribe = function(to, action, event, objName, handler) {
 rws.unsubscribe = function(handlerId) {
     var fut = this._futures[handlerId];
     if (fut) {
-        Session.unsubscribe(fut.info, function() {
+        session.unsubscribe(fut.info, function() {
             delete rws._futures[handlerId];
         }, undefined);
     }
@@ -203,7 +203,7 @@ rws._futures = {};
 rws._onOpen = function() {
     this.nextobjid = 1;
     var handler = this;
-    Session.getId(function(data) {
+    session.getId(function(data) {
         handler.id = data;
         handler._connected = true;
         if (handler.onopen) {

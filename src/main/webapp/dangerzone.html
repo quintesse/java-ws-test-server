@@ -31,7 +31,7 @@
         <script type='text/javascript' src="/rws/object/Server.js"></script>
         <script type='text/javascript' src="/rws/object/Session.js"></script>
         <script type='text/javascript' src="/rws/object/Context.js"></script>
-        <script type='text/javascript' src="/rws/object/Package.js"></script>
+        <script type='text/javascript' src="/rws/object/PackageInfo.js"></script>
         <script type='text/javascript' src="/rws/object/DataStore.js"></script>
         <script type='text/javascript'>
             if (!window.WebSocket) {
@@ -57,20 +57,10 @@
                 $('#main').removeClass('spinner');
                 setTimeout('alert("Connection lost")', 1);
             }
-
-            function tryRmi() {
-                rws.call("sys", "listPackages", "Package", function(data) {
-                    alert("Ok " + data);
-                }, function(ex) {
-                    alert("Err " + ex);
-                });
-            }
         </script>
     </head>
     <body id="main" class="spinner">
         <div id="errorDialog"></div>
         <div id="toolbox" title="Toolbox"></div>
-
-        <input type="button" value="Click Me" onclick="tryRmi()">
     </body>
 </html>

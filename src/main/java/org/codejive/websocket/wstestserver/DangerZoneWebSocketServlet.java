@@ -14,9 +14,9 @@ import org.codejive.rws.RwsContext;
 import org.codejive.rws.RwsException;
 
 import org.codejive.rws.RwsObject;
-import org.codejive.rws.RwsRegistry;
 import org.codejive.rws.RwsSession;
 import org.codejive.rws.converters.RwsBeanConverter;
+import org.codejive.rws.utils.RwsContextWebFactory;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 import org.slf4j.Logger;
@@ -24,7 +24,8 @@ import org.slf4j.LoggerFactory;
 
 public class DangerZoneWebSocketServlet extends WebSocketServlet {
 
-    private final DataStore dataStore = new DataStore();
+    private static final RwsContext context = new RwsContext();
+    private static final DataStore dataStore = new DataStore();
     
     Logger logger = LoggerFactory.getLogger(DangerZoneWebSocketServlet.class);
 
@@ -32,35 +33,39 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         try {
+
+            RwsBeanConverter conv = new RwsBeanConverter(context.getRegistry());
             // TODO Make this configurable!
-            RwsObject srv = new RwsObject(DangerZoneWebSocketServlet.class, "Server", new RwsBeanConverter());
+            RwsObject srv = new RwsObject(DangerZoneWebSocketServlet.class, "Server", conv);
             // METHODS new String[]{"echo"}, true
             // INSTANCE srv.setTargetObject(null, this); // Scope.global,
-            RwsRegistry.register(srv);
+            context.getRegistry().register(srv, context, "server", this);
 
-            RwsObject ctx = new RwsObject(RwsContext.class, "Context", new RwsBeanConverter());
+            RwsObject ctx = new RwsObject(RwsContext.class, "Context", conv);
             // METHODS new String[]{"listClients", "subscribeConnect", "unsubscribeConnect", "subscribeDisconnect", "unsubscribeDisconnect", "subscribeChange", "unsubscribeChange"}, true
             // INSTANCE Scope.global
-            RwsRegistry.register(ctx);
+            context.getRegistry().register(ctx, context, "context", context);
 
-            RwsObject clt = new RwsObject(RwsSession.class, "Session", new RwsBeanConverter());
+            RwsObject clt = new RwsObject(RwsSession.class, "Session", conv);
             // INSTANCE Scope.connection
-            RwsRegistry.register(clt);
+            context.getRegistry().register(clt);
 
-            RwsObject store = new RwsObject(DataStore.class, "DataStore", new RwsBeanConverter());
+            RwsObject store = new RwsObject(DataStore.class, "DataStore", conv);
             // INSTANCE store.setTargetObject(null, dataStore); // Scope.global,
-            RwsRegistry.register(store);
+            context.getRegistry().register(store, context, "dataStore", dataStore);
 
-            RwsObject pkg = new RwsObject(Package.class, "Package", new RwsBeanConverter());
+            RwsObject pkg = new RwsObject(PackageInfo.class, "PackageInfo", conv);
             // INSTANCE pkg.setTargetObject(null, new Package(config)); // , Scope.global
-            RwsRegistry.register(pkg);
+            context.getRegistry().register(pkg, context, "packageInfo", new PackageInfo(config));
             
 //            String[] cltProps = {"id", "name"};
-//            RwsRegistry.register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
-//            RwsRegistry.register(new RwsBeanConverter(), Clients.ClientEvent.class.getName());
-//            RwsRegistry.register(new RwsBeanConverter(), RwsSession.Subscription.class.getName());
+//            context.getRegistry().register(new RwsBeanConverter(cltProps, true), Clients.ClientInfo.class.getName());
+//            context.getRegistry().register(new RwsBeanConverter(), Clients.ClientEvent.class.getName());
+//            context.getRegistry().register(new RwsBeanConverter(), RwsSession.Subscription.class.getName());
+
+            RwsContextWebFactory.getInstance(config.getServletContext()).setContext(context);
         } catch (RwsException ex) {
-            throw new ServletException("Could not initialize RwsRegistry", ex);
+            throw new ServletException("Could not initialize context.getRegistry()", ex);
         }
     }
 
@@ -87,7 +92,7 @@ public class DangerZoneWebSocketServlet extends WebSocketServlet {
         @Override
         public void onConnect(Outbound outbound) {
             logger.info(this + " onConnect - creating JettyWebSocketAdapter");
-            adapter = new JettyWebSocketAdapter(outbound);
+            adapter = new JettyWebSocketAdapter(context, outbound);
             adapter.onConnect();
         }
 

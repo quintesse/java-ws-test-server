@@ -23,7 +23,7 @@ sysPkg["activate"] = function() {
             });
 
             setTimeout(function() {
-                Package.listPackages(function(data) {
+                packageInfo.listPackages(function(data) {
                     var lst = $("#sysPackageList");
                     lst.empty();
                     for (idx in data) {
