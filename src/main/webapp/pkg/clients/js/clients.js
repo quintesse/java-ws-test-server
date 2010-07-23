@@ -3,12 +3,14 @@ if (!clientsPkg) var clientsPkg = {};
 
 //clientsPkg["period"] = 10;
 
-clientsPkg["activate"] = function() {
+clientsPkg.activate = function() {
     if (!this.toolbox) {
         var fn = function() {clientsPkg.showClients()};
         context.subscribeSessionConnect(fn);
         context.subscribeSessionDisconnect(fn);
         context.subscribeSessionChange(fn);
+        context.subscribeMulticastJoin(fn);
+        context.subscribeMulticastLeave(fn);
         this.toolbox = this.loadToolbox("Clients", "clients.html", function() {
             $("#toolboxClientButton").click(function() {
                 var name = $("#toolboxClientName").val();
@@ -22,7 +24,7 @@ clientsPkg["activate"] = function() {
     }
 }
 
-clientsPkg["deactivate"] = function() {
+clientsPkg.deactivate = function() {
     if (this.toolbox) {
         clearInterval(this.interval);
         this.showClients();
@@ -31,7 +33,7 @@ clientsPkg["deactivate"] = function() {
     }
 }
 
-clientsPkg["showClients"] = function() {
+clientsPkg.showClients = function() {
     if (this.toolbox) {
         if (rws.isConnected()) {
             context.listSessions(function(lst) {
@@ -46,6 +48,16 @@ clientsPkg["showClients"] = function() {
                 $("#toolboxClientList").html(txt);
                 Toolbox.resizePanel(clientsPkg.toolbox);
             });
+            context.listMulticastGroups(function(lst) {
+                var txt = "";
+                for (id in lst) {
+                    var group = lst[id];
+                    txt = txt + "<li>" + group + "</li>";
+                }
+                clientsPkg.groups = lst;
+                $("#toolboxGroupList").html(txt);
+                Toolbox.resizePanel(clientsPkg.toolbox);
+            });
         } else {
             $("#toolboxClientList").html('Disconnected');
             Toolbox.resizePanel(this.toolbox);
@@ -53,6 +65,6 @@ clientsPkg["showClients"] = function() {
     }
 }
 
-clientsPkg["setName"] = function(name) {
+clientsPkg.setName = function(name) {
     session.setName(name);
 }

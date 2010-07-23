@@ -72,6 +72,15 @@ rws.broadcast = function(data) {
     this.send('all', data);
 };
 
+// Send a message over the web socket to all members od the indicated group.
+// (except for the client where the packet originated).
+//   group - the name of the group to send the message to
+//   data - the data necessary to complete the action.
+rws.multicast = function(group, data) {
+    if (data.id) data.id = null; // Make sure we don't try to ask for results
+    this.send('#' + group, data);
+};
+
 // Returns a new Object ID (an ID guaranteed to be unique among all clients).
 rws.getNewId = function() {
     return this.id + "_" + this.nextobjid++;
@@ -140,6 +149,32 @@ rws.broadcall = function() {
     }
 
     this.broadcast(info);
+    this.perform(info);
+};
+
+// Performs a remote method call on all clients that are members of the indicated
+// multicast group (except for one where the packet originated). And performs the
+// indicated action locally as well.
+//   group - the name of the group
+//   method - the name of the method to call
+//   objName - the name of the remote object (can be undefined for global context)
+//   params... - the parameters to pass can come after
+rws.multicall = function() {
+    var group = Array.prototype.shift.call(arguments);
+    var method = Array.prototype.shift.call(arguments);
+    var objName = Array.prototype.shift.call(arguments);
+
+    var info = {
+        "method" : method
+    }
+    if (arguments.length > 0) {
+        info["params"] = Array.prototype.slice.call(arguments);
+    }
+    if (objName) {
+        info["object"] = objName;
+    }
+
+    this.multicast(group, info);
     this.perform(info);
 };
 

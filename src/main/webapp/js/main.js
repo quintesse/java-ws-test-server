@@ -71,7 +71,7 @@ document.onmousemove = function(event) {
         var id = draggedObj[0].id;
 
         // TODO make this generic! This part is only meant for the Starbutton package
-        rws.broadcall("star", "starbuttonPkg", id, objNewX, objNewY);
+        rws.multicall("starbutton", "star", "starbuttonPkg", id, objNewX, objNewY);
         dataStore.store("starbutton", id, { "method" : "star", "object" : "starbuttonPkg", "params" : [id, objNewX, objNewY] });
     }
 }

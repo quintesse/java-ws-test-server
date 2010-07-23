@@ -6,6 +6,7 @@ starbuttonPkg["activate"] = function() {
         this.toolbox = this.loadToolbox("Starbutton", "starbutton.html", function() {
             $("#starbuttonTwinkle").click(function() {starbuttonPkg.twinkle()});
             $("#starbuttonClear").click(function() {starbuttonPkg.clear()});
+            session.join("starbutton");
             dataStore.listData('starbutton', function(data) {
                 for (idx in data) {
                     var info = data[idx];
@@ -18,6 +19,7 @@ starbuttonPkg["activate"] = function() {
 
 starbuttonPkg["deactivate"] = function() {
     if (this.toolbox) {
+        session.leave("starbutton");
         Toolbox.removePanel(this.toolbox);
         delete this.toolbox;
     }
@@ -27,7 +29,7 @@ starbuttonPkg["twinkle"] = function() {
     var id = "star_" + rws.getNewId();
     var x = Math.floor(Math.random() * 500);
     var y = Math.floor(Math.random() * 500);
-    rws.broadcall("star", "starbuttonPkg", id, x, y);
+    rws.multicall("starbutton", "star", "starbuttonPkg", id, x, y);
     dataStore.store('starbutton', id, { "method" : "star", "object" : "starbuttonPkg", "params" : [id, x, y] });
 }
 
@@ -50,7 +52,7 @@ starbuttonPkg["remove"] = function(id, x, y) {
 starbuttonPkg["clear"] = function() {
     $(".star").each(function(idx, star) {
         var id = star.id;
-        rws.broadcall("remove", "starbuttonPkg", id);
+        rws.multicall("starbutton", "remove", "starbuttonPkg", id);
         dataStore.remove('starbutton', id);
     });
 }
