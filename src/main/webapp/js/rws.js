@@ -46,6 +46,11 @@ rws.isConnected = function(msg) {
 //        (except for one where the packet originated).
 //   data - the data necessary to complete the action
 rws.send = function(to, data) {
+    if (!this.webSocket) {
+        console.log("ERROR: Cannot send, socket not connected!");
+        throw "NotConnected";
+    }
+
     var info = this._copy(data);
     info.to = to;
 
