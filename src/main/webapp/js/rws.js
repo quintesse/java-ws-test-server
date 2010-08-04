@@ -88,6 +88,10 @@ rws.multicast = function(group, data) {
 
 // Returns a new Object ID (an ID guaranteed to be unique among all clients).
 rws.getNewId = function() {
+    if (!this.isConnected() && this.nextobjid > 1) {
+        console.log("ERROR: Cannot get object ID, socket not connected!");
+        throw "NotConnected";
+    }
     return this.id + "_" + this.nextobjid++;
 };
 
@@ -243,7 +247,10 @@ rws._futures = {};
 rws._onOpen = function() {
     this.nextobjid = 1;
     var handler = this;
-    session.getId(function(data) {
+    // The following line could have been implemented as:
+    //    session.getId(function(data)
+    // but this would mean requiring another javascript import.
+    rws.call('sys', 'getId', 'session', function(data) {
         handler.id = data;
         handler._connected = true;
         if (handler.onopen) {
