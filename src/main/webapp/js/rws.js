@@ -372,3 +372,39 @@ rws._copy = function(value) {
     }
     return newvalue;
 };
+
+rws._pretty = function(obj, pad) {
+    var indent = '    ';
+    if (!pad) pad = '';
+    var out = '';
+    if (obj instanceof Array) {
+        out += '[';
+        for (var i=0; i<obj.length; i++) {
+            var val = this._pretty(obj[i], pad + indent);
+            if (val.indexOf('\n') >= 0) {
+                out += '\n' + pad + indent;
+            } else {
+                out += ' ';
+            }
+            out += val + ',';
+        }
+        out = out.replace(/,$/, '');
+        if (out.indexOf('\n') >= 0) {
+            out += '\n]';
+        } else {
+            out += ' ]';
+        }
+    } else if (obj instanceof Object) {
+        out += '{\n';
+        for (var i in obj) {
+            out += pad + indent + this._pretty(i, pad + indent) + ' : ' + this._pretty(obj[i], pad + indent) + ',\n';
+        }
+        out = out.replace(/,\n$/, '\n') + pad + '}';
+    } else if (typeof obj == 'string') {
+        out += "'" + obj + "'";
+    } else {
+        out += obj;
+    }
+    return out;
+}
+
