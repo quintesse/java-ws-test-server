@@ -23,7 +23,7 @@ function __upperFirst(value) {
 function __copy(value) {
     var newvalue = {};
     for (prop in value) {
-        if (this[prop] && typeof this[prop] == "object") {
+        if (value[prop] && typeof value[prop] == "object") {
             newvalue[prop] = __copy(value[prop]);
         } else {
             newvalue[prop] = value[prop];
